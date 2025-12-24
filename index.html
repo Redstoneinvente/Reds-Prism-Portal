@@ -9,6 +9,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
     <style>
         :root {
@@ -29,6 +30,18 @@
             margin: 0; padding: 20px; background-color: var(--surface); color: #1c1b1f; 
             font-family: 'Google Sans', 'Roboto', sans-serif; display: flex; justify-content: center;
         }
+
+        @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    height: 36px;
+}
 
         .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -104,6 +117,48 @@
 <body>
 
 <div class="container">
+    <div id="loginView" class="hidden">
+    <div class="card" style="max-width: 400px; margin: 100px auto; text-align: center;">
+        <h2>Admin Access</h2>
+        <div class="field-group">
+            <label>Email</label>
+            <input type="email" id="auth_email">
+        </div>
+        <div class="field-group">
+            <label>Password</label>
+            <input type="password" id="auth_pass">
+        </div>
+        <button class="btn btn-filled" style="width: 100%; justify-content: center;" onclick="handleLogin()">Login to Prism</button>
+        <p id="loginError" style="color: red; font-size: 0.8rem; margin-top: 10px;"></p>
+    </div>
+</div>
+
+<div id="adminHeader" class="hidden" style="background: white; border-radius: 20px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px var(--shadow); border: 1px solid var(--outline);">
+    
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="btn btn-tonal btn-sm" onclick="goHome()" style="padding: 8px 16px;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">dashboard</span>
+            Dashboard
+        </button>
+        <div style="height: 24px; width: 1px; background: var(--outline); margin: 0 8px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite;"></div>
+            <span id="adminEmailDisplay" style="font-size: 0.85rem; font-weight: 500; opacity: 0.7;">Admin Mode</span>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <button class="btn btn-outline btn-sm" onclick="handleLogout()" style="border-color: #ffbaba; color: #d32f2f;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+            Sign Out
+        </button>
+        <button class="btn btn-filled btn-sm" onclick="saveToDisk()" style="box-shadow: 0 4px 10px rgba(var(--hue), 40%, 40%, 0.3);">
+            <span class="material-symbols-outlined" style="font-size: 18px;">cloud_upload</span>
+            Push Changes
+        </button>
+    </div>
+</div>
+
     <div id="dashboardView">
         <h1 style="font-size: 2.5rem; letter-spacing: -1px;">Prism <span style="font-weight: 400; opacity: 0.5;">Portal</span></h1>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
@@ -260,23 +315,83 @@
     let currentProj = null;
     let isAdmin = false;
 
-    window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
-        isAdmin = urlParams.get('mode') === 'admin';
+   // --- AUTH STATE ---
+const auth = firebase.auth();
 
-        db.ref("projects").on("value", (snapshot) => {
-            const data = snapshot.val();
-            projects = data ? Object.values(data) : [];
-            
-            if (id) {
-                currentProj = projects.find(p => p.id === id);
-                if (currentProj) loadTicketUI(); else goHome();
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    const mode = urlParams.get('mode');
+
+    // Monitor Auth State
+    auth.onAuthStateChanged(user => {
+
+        if (user) {
+        isAdmin = true;
+        document.getElementById('loginView').classList.add('hidden');
+        
+        // Update the header display
+        const emailLabel = document.getElementById('adminEmailDisplay');
+        if(emailLabel) emailLabel.innerText = user.email.split('@')[0]; // Shows just the username part
+        
+        initData(id);
+    }
+    
+        if (user) {
+            // Logged in: Grant Admin privileges
+            isAdmin = true;
+            document.getElementById('loginView').classList.add('hidden');
+            initData(id);
+        } else {
+            // Not logged in
+            isAdmin = false;
+            if (mode === 'admin' || !id) {
+                // If trying to access admin mode or dashboard, show login
+                showLogin();
             } else {
-                renderDashboard();
+                // Client view: Proceed without admin rights
+                initData(id);
             }
-        });
-    };
+        }
+    });
+};
+
+function showLogin() {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.getElementById('ticketView').classList.add('hidden');
+}
+
+async function handleLogin() {
+    const email = document.getElementById('auth_email').value;
+    const pass = document.getElementById('auth_pass').value;
+    const errEl = document.getElementById('loginError');
+    
+    try {
+        await auth.signInWithEmailAndPassword(email, pass);
+        errEl.innerText = "";
+    } catch (error) {
+        errEl.innerText = "Access Denied: " + error.message;
+    }
+}
+
+function handleLogout() {
+    auth.signOut().then(() => goHome());
+}
+
+function initData(id) {
+    db.ref("projects").on("value", (snapshot) => {
+        const data = snapshot.val();
+        projects = data ? Object.values(data) : [];
+        
+        if (id) {
+            currentProj = projects.find(p => p.id === id);
+            if (currentProj) loadTicketUI(); else goHome();
+        } else if (isAdmin) {
+            renderDashboard();
+        }
+    });
+}
 
     function goHome() { window.location.href = window.location.pathname; }
 
