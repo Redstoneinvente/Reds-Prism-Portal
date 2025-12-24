@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prism | Project Portal</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --hue: 250;
+            --primary: hsl(var(--hue), 40%, 40%);
+            --on-primary: #ffffff;
+            --primary-container: hsl(var(--hue), 50%, 90%);
+            --on-primary-container: hsl(var(--hue), 60%, 15%);
+            --surface: hsl(var(--hue), 10%, 98%);
+            --surface-variant: hsl(var(--hue), 20%, 94%);
+            --outline: hsl(var(--hue), 10%, 80%);
+            --shadow: rgba(var(--hue), 20%, 10%, 0.1);
+            
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background-color: var(--surface); 
+            color: #1c1b1f; 
+            font-family: 'Google Sans', 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container { width: 100%; max-width: 850px; animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { 
+            background: var(--surface-variant); 
+            border-radius: 28px; 
+            padding: 24px; 
+            margin-bottom: 16px; 
+            border: 1px solid transparent;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover { box-shadow: 0 4px 12px var(--shadow); }
+
+        header {
+            background: var(--primary-container);
+            color: var(--on-primary-container);
+            padding: 40px 24px;
+            border-radius: 32px;
+            text-align: center;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .field-group { margin-bottom: 20px; }
+        label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 8px; color: var(--primary); margin-left: 4px; }
+        
+        input, textarea, select {
+            width: 100%; 
+            padding: 16px; 
+            border-radius: 12px;
+            border: 1px solid var(--outline);
+            background: #ffffff;
+            font-size: 1rem;
+            transition: border 0.3s, background 0.3s;
+        }
+        input:focus { outline: none; border: 2px solid var(--primary); background: #fff; }
+        
+        input:disabled, textarea:disabled, select:disabled {
+            background: transparent; border: 1px solid transparent; padding-left: 4px; color: #1c1b1f; font-weight: 500; appearance: none;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: 'Google Sans', sans-serif;
+        }
+        .btn-filled { background: var(--primary); color: var(--on-primary); }
+        .btn-filled:hover { opacity: 0.9; transform: scale(1.02); box-shadow: 0 2px 8px var(--shadow); }
+        .btn-tonal { background: var(--primary-container); color: var(--on-primary-container); }
+        .btn-outline { background: transparent; border: 1px solid var(--outline); color: var(--primary); }
+
+        .progress-track { background: rgba(0,0,0,0.08); height: 8px; border-radius: 10px; margin: 16px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); border-radius: 10px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .feature-item { 
+            display: flex; align-items: center; gap: 12px; padding: 12px; 
+            background: white; border-radius: 16px; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.03);
+        }
+        .feature-item.done { opacity: 0.6; }
+        .feature-item.done span { text-decoration: line-through; }
+
+        .history-entry { 
+            font-size: 0.8rem; padding: 10px 12px; border-left: 3px solid var(--primary); 
+            background: white; margin-bottom: 8px; border-radius: 4px 16px 16px 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        #historyList {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .admin-only { border: 2px dashed var(--primary); background: rgba(255,255,255,0.6); }
+        .badge-admin { background: var(--primary); color: white; padding: 4px 12px; border-radius: 10px; font-size: 11px; letter-spacing: 1px; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="dashboardView">
+        <h1 style="font-size: 2.5rem; letter-spacing: -1px;">Prism <span style="font-weight: 400; opacity: 0.5;">Portal</span></h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+            <p style="opacity: 0.7;">Welcome back, Developer.</p>
+            <button class="btn btn-filled" onclick="showCreator()">
+                <span class="material-symbols-outlined">add</span> Create Ticket
+            </button>
+        </div>
+        <div id="projectList"></div>
+    </div>
+
+    <div id="creatorView" class="hidden">
+        <button class="btn btn-outline" style="margin-bottom: 24px;" onclick="goHome()">
+            <span class="material-symbols-outlined">arrow_back</span> Back
+        </button>
+        <div class="card" style="background: white;">
+            <h2 style="margin-top:0">New Project Details</h2>
+            <div class="field-group">
+                <label>Project Name</label>
+                <input type="text" id="c_name" placeholder="e.g. Procedural Dungeon Generator" oninput="updateTheme(this.value)">
+            </div>
+            <div class="field-group">
+                <label>Client Name</label>
+                <input type="text" id="c_client" placeholder="Company or Individual">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="field-group">
+                    <label>Budget ($)</label>
+                    <input type="number" id="c_price" value="1200">
+                </div>
+                <div class="field-group">
+                    <label>Delivery Date</label>
+                    <input type="date" id="c_end">
+                </div>
+            </div>
+            <button class="btn btn-filled" style="width:100%; justify-content: center; padding: 18px;" onclick="createProject()">
+                Generate Project Ticket
+            </button>
+        </div>
+    </div>
+
+    <div id="ticketView" class="hidden">
+        <div id="adminHeader" class="hidden" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <button class="btn btn-outline btn-sm" onclick="goHome()">Dashboard</button>
+            <div class="badge-admin">ADMIN EDITOR</div>
+            <button class="btn btn-filled btn-sm" onclick="saveToDisk()">Save Changes</button>
+        </div>
+
+        <header id="mainHeader">
+            <input type="text" id="t_name" style="font-size: 2rem; text-align:center; font-weight:700; background:transparent; border:none; color:inherit;" disabled onchange="markDirty('Updated Name')">
+            <div id="t_id" style="font-family: monospace; opacity: 0.6; margin-bottom: 15px;"></div>
+            
+            <div style="max-width: 200px; margin: 0 auto;">
+                <select id="t_status" disabled onchange="markDirty('Changed status')">
+                    <option value="Pending Approval">Pending Approval</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Review Phase">Review Phase</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px;">
+            <div class="left-col">
+                <div class="card">
+                    <h3 style="margin-top:0">Project Scope</h3>
+                    <textarea id="t_scope" rows="6" disabled onchange="markDirty('Modified scope text')"></textarea>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin:0">Features</h3>
+                        <div id="adminFeatureAdd" class="hidden">
+                            <button class="btn btn-tonal btn-sm" onclick="addFeaturePrompt()">+ Add</button>
+                        </div>
+                    </div>
+                    <div id="featureList" style="margin-top: 16px;"></div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div class="card">
+                    <h3 style="margin-top:0">Timeline</h3>
+                    <div class="progress-track"><div id="t_progress" class="progress-fill"></div></div>
+                    <label>Deadline</label>
+                    <input type="date" id="t_end" disabled onchange="markDirty('Updated deadline')">
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-top:0">Financials</h3>
+                    <label>Base Price</label>
+                    <div style="display:flex; align-items:center; gap:4px; font-size:1.5rem; font-weight:700;">
+                        $ <input type="number" id="t_price" style="font-size:1.5rem; font-weight:700; width:100%" disabled onchange="markDirty('Updated price')">
+                    </div>
+                </div>
+
+                <div id="historySection" class="card">
+                    <h3 style="margin-top:0">Audit Log</h3>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="background: var(--primary-container); color: var(--on-primary-container);">
+            <h3 style="margin-top:0">Client Collaboration</h3>
+            <div id="speedupList" style="margin-bottom: 20px;"></div>
+            <div id="commentsList" style="margin-bottom: 20px;"></div>
+            <div style="display: flex; gap: 8px; background: white; padding: 8px; border-radius: 16px;">
+                <input type="text" id="newComment" placeholder="Message to developer..." style="border:none; margin:0;">
+                <button class="btn btn-filled" onclick="postComment()">Send</button>
+            </div>
+        </div>
+        
+        <div id="shareSection" class="card" style="text-align:center;">
+            <p style="font-size: 0.9rem; margin-bottom: 12px;">Share this link with your client:</p>
+            <input type="text" id="clientLink" readonly style="background: #eee; text-align: center; font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
+            <button class="btn btn-outline btn-sm" onclick="copyLink()">Copy Link</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    import { initializeApp } from "firebase/app";
+    import { getAnalytics } from "firebase/analytics";
+
+    let projects = JSON.parse(localStorage.getItem('prism_v3') || "[]");
+    let currentProj = null;
+    let isAdmin = false;
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyBYXOcbODnX935TjblP1dhc21uDaSJBzLs",
+    authDomain: "reds-prismportal.firebaseapp.com",
+    databaseURL: "https://reds-prismportal-default-rtdb.firebaseio.com",
+    projectId: "reds-prismportal",
+    storageBucket: "reds-prismportal.firebasestorage.app",
+    messagingSenderId: "404043779432",
+    appId: "1:404043779432:web:02e011e50aab507b6ddadd",
+    measurementId: "G-X026E8YW3T"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Instead of loading from local storage, listen to the DB
+    function syncWithFirebase() {
+        db.ref("projects").on("value", (snapshot) => {
+            projects = snapshot.val() ? Object.values(snapshot.val()) : [];
+            // Trigger your UI renders here
+            if (!currentProj) renderDashboard();
+            else loadTicket(currentProj.id);
+        });
+    }
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+        isAdmin = urlParams.get('mode') === 'admin';
+        if (id) loadTicket(id); else renderDashboard();
+    };
+
+    function goHome() { window.location.href = window.location.pathname; }
+
+    function renderDashboard() {
+        document.getElementById('dashboardView').classList.remove('hidden');
+        document.getElementById('ticketView').classList.add('hidden');
+        document.getElementById('creatorView').classList.add('hidden');
+        const list = document.getElementById('projectList');
+        if(projects.length === 0) {
+            list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found. Create your first ticket to get started.</div>`;
+            return;
+        }
+        list.innerHTML = projects.map(p => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight:700; font-size:1.2rem; color:hsl(${getHue(p.name)}, 50%, 30%)">${p.name}</div>
+                    <div style="font-size:0.85rem; opacity:0.6;">${p.client} • ${p.status}</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">Client View</button>
+                    <button class="btn btn-filled btn-sm" onclick="window.location.search='?id=${p.id}&mode=admin'">Manage</button>
+                    <button class="btn btn-outline btn-sm" style="color:red" onclick="deleteProject('${p.id}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function showCreator() {
+        document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('creatorView').classList.remove('hidden');
+        document.getElementById('c_end').valueAsDate = new Date(Date.now() + 1.21e+9);
+    }
+
+    function createProject() {
+        const name = document.getElementById('c_name').value;
+        if(!name) return;
+        const p = {
+            id: Math.random().toString(36).substr(2, 6).toUpperCase(),
+            name: name,
+            client: document.getElementById('c_client').value || "Guest",
+            price: document.getElementById('c_price').value,
+            end: document.getElementById('c_end').value,
+            start: new Date().toISOString().split('T')[0],
+            status: "Pending Approval",
+            scope: "Describe the deliverables here...",
+            features: [],
+            history: [{t: "Project Created", d: new Date().toLocaleString()}],
+            comments: [],
+            speedups: [{name: "Priority Support", price: 100, active: false}, {name: "Weekend Rush", price: 250, active: false}]
+        };
+        projects.push(p);
+        localStorage.setItem('prism_v3', JSON.stringify(projects));
+        window.location.search = `?id=${p.id}&mode=admin`;
+    }
+
+    function loadTicket(id) {
+        currentProj = projects.find(p => p.id === id);
+        if(!currentProj) return goHome();
+        
+        document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('ticketView').classList.remove('hidden');
+        updateTheme(currentProj.name);
+
+        document.getElementById('t_name').value = currentProj.name;
+        document.getElementById('t_id').innerText = `REFERENCE: ${currentProj.id}`;
+        document.getElementById('t_status').value = currentProj.status;
+        document.getElementById('t_end').value = currentProj.end;
+        document.getElementById('t_scope').value = currentProj.scope;
+        document.getElementById('t_price').value = currentProj.price;
+        //document.getElementById('clientLink').value = window.location.origin + window.location.pathname + "?id=" + currentProj.id;
+        const shareUrl = new URL(window.location.href);
+        shareUrl.searchParams.set('id', currentProj.id);
+        shareUrl.searchParams.delete('mode'); // Ensure the client doesn't get admin mode!
+        document.getElementById('clientLink').value = shareUrl.href;
+
+        if (isAdmin) {
+            document.getElementById('adminHeader').classList.remove('hidden');
+            document.getElementById('adminFeatureAdd').classList.remove('hidden');
+            ['t_name', 't_status', 't_end', 't_scope', 't_price'].forEach(id => {
+                const el = document.getElementById(id);
+                el.disabled = false;
+                el.classList.add('admin-only');
+            });
+        }
+
+        renderFeatures();
+        renderHistory();
+        renderComments();
+        renderSpeedups();
+        updateProgress();
+    }
+
+    function saveToDisk() {
+        currentProj.name = document.getElementById('t_name').value;
+        currentProj.status = document.getElementById('t_status').value;
+        currentProj.end = document.getElementById('t_end').value;
+        currentProj.scope = document.getElementById('t_scope').value;
+        currentProj.price = document.getElementById('t_price').value;
+        const idx = projects.findIndex(p => p.id === currentProj.id);
+        projects[idx] = currentProj;
+        localStorage.setItem('prism_v3', JSON.stringify(projects));
+        alert("Success: Project database updated.");
+    }
+
+    function addFeaturePrompt() {
+        const f = prompt("Enter feature name:");
+        if(!f) return;
+        currentProj.features.push({name: f, done: false});
+        markDirty(`Added feature: ${f}`);
+        renderFeatures();
+    }
+
+    function toggleFeature(i) {
+        if(!isAdmin) return;
+        currentProj.features[i].done = !currentProj.features[i].done;
+        markDirty(`Checked off ${currentProj.features[i].name}`);
+        renderFeatures();
+    }
+
+    function postComment() {
+        const el = document.getElementById('newComment');
+        if(!el.value) return;
+        const msg = `<b>${isAdmin ? 'Developer' : 'Client'}:</b> ${el.value}`;
+        currentProj.comments.unshift(msg);
+        el.value = "";
+        saveToDisk();
+        renderComments();
+    }
+
+    function renderFeatures() {
+        const list = document.getElementById('featureList');
+        if(currentProj.features.length === 0) list.innerHTML = `<p style="opacity:0.4; font-size:0.8rem;">No features listed yet.</p>`;
+        else list.innerHTML = currentProj.features.map((f, i) => `
+            <div class="feature-item ${f.done ? 'done' : ''}" onclick="toggleFeature(${i})" style="cursor:${isAdmin?'pointer':'default'}">
+                <span class="material-symbols-outlined" style="color:${f.done ? 'var(--primary)' : '#ccc'}">
+                    ${f.done ? 'check_circle' : 'radio_button_unchecked'}
+                </span>
+                <span>${f.name}</span>
+            </div>
+        `).join('');
+    }
+
+    function renderHistory() {
+        document.getElementById('historyList').innerHTML = currentProj.history.map(h => 
+            `<div class="history-entry"><b>${h.t}</b><br><span style="opacity:0.5">${h.d}</span></div>`
+        ).join('');
+    }
+
+    function renderComments() {
+        document.getElementById('commentsList').innerHTML = currentProj.comments.map(c => 
+            `<div style="background:rgba(255,255,255,0.7); padding:12px; border-radius:12px; margin-bottom:8px; font-size:0.9rem;">${c}</div>`
+        ).join('');
+    }
+
+    function renderSpeedups() {
+        document.getElementById('speedupList').innerHTML = currentProj.speedups.map((s, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px;">
+                <span style="font-size:0.9rem;">${s.name} (+$${s.price})</span>
+                <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px;">
+            </div>
+        `).join('');
+    }
+
+    function toggleSpeed(i) {
+        currentProj.speedups[i].active = !currentProj.speedups[i].active;
+        if(currentProj.speedups[i].active) markDirty(`Client requested ${currentProj.speedups[i].name}`);
+        saveToDisk();
+    }
+
+    function updateProgress() {
+        const start = new Date(currentProj.start).getTime();
+        const end = new Date(currentProj.end).getTime();
+        const now = Date.now();
+        let pct = ((now - start) / (end - start)) * 100;
+        document.getElementById('t_progress').style.width = Math.min(100, Math.max(0, pct)) + "%";
+    }
+
+    function getHue(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        return Math.abs(hash % 360);
+    }
+
+    function updateTheme(str) { 
+        document.documentElement.style.setProperty('--hue', getHue(str)); 
+    }
+
+    function markDirty(msg) {
+        currentProj.history.unshift({t: msg, d: new Date().toLocaleString()});
+        renderHistory();
+    }
+
+    function copyLink() {
+        const copyText = document.getElementById("clientLink");
+        copyText.select();
+        document.execCommand("copy");
+        alert("Link copied to clipboard!");
+    }
+
+    function deleteProject(id) {
+        if(!confirm("Are you sure? This cannot be undone.")) return;
+        projects = projects.filter(p => p.id !== id);
+        localStorage.setItem('prism_v3', JSON.stringify(projects));
+        renderDashboard();
+    }
+</script>
+</body>
+</html>

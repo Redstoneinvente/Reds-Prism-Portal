@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prism Project Tracker</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        :root {
+            --hue: 200;
+            --primary: hsl(var(--hue), 80%, 40%);
+            --primary-container: hsl(var(--hue), 90%, 90%);
+            --on-primary-container: hsl(var(--hue), 30%, 20%);
+            --surface: #fdfbff;
+            --surface-variant: hsl(var(--hue), 15%, 96%);
+            --outline: hsl(var(--hue), 10%, 80%);
+            --radius: 16px;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--surface);
+            color: #1a1b1f;
+        }
+
+        body { margin: 0; padding: 2rem; display: flex; justify-content: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 1.5rem; }
+        .card { background: var(--surface-variant); padding: 2rem; border-radius: var(--radius); border: 1px solid transparent; }
+        .admin-border { border: 2px dashed var(--primary) !important; background: white !important; }
+
+        header {
+            background-color: var(--primary-container); color: var(--on-primary-container);
+            padding: 2rem; border-radius: var(--radius); text-align: center;
+        }
+
+        /* Inputs */
+        input, textarea, select {
+            width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px;
+            border: 1px solid var(--outline); border-radius: 8px; box-sizing: border-box;
+            background: white; font-family: inherit;
+        }
+        input:disabled, textarea:disabled, select:disabled { 
+            background: transparent; border: none; padding: 0; font-weight: 500; color: #333; appearance: none;
+        }
+
+        /* Buttons */
+        .btn { padding: 12px 24px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;}
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-ghost { background: transparent; border: 1px solid var(--outline); color: var(--primary); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+        .hidden { display: none !important; }
+        .row { display: flex; gap: 1rem; }
+        .col { flex: 1; }
+
+        .history-log { max-height: 150px; overflow-y: auto; font-size: 0.8rem; background: #eee; padding: 10px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="dashboardView">
+        <h1>Project Manager</h1>
+        <button class="btn btn-primary" onclick="showCreator()">+ Create New Ticket</button>
+        <div id="projectList" style="margin-top: 1.5rem;"></div>
+    </div>
+
+    <div id="creatorView" class="hidden">
+        <button class="btn btn-ghost btn-sm" onclick="goHome()">← Back</button>
+        <h2>New Project</h2>
+        <div class="card">
+            <label>Project Name</label> <input type="text" id="c_name" placeholder="My Game" oninput="updateTheme(this.value)">
+            <label>Client Name</label> <input type="text" id="c_client" placeholder="Customer Name">
+            <div class="row">
+                <div class="col"><label>Price ($)</label> <input type="number" id="c_price" value="500"></div>
+                <div class="col"><label>Deadline</label> <input type="date" id="c_end"></div>
+            </div>
+            <button class="btn btn-primary" onclick="createProject()">Generate Project</button>
+        </div>
+    </div>
+
+    <div id="ticketView" class="hidden">
+        <div id="adminBadge" class="hidden" style="text-align:center; margin-bottom:10px;">
+            <span style="background:var(--primary); color:white; padding:5px 15px; border-radius:20px; font-size:12px; font-weight:bold;">⚡ ADMIN EDITING MODE</span>
+        </div>
+
+        <header>
+            <input type="text" id="t_name" style="font-size: 1.8rem; text-align:center; font-weight:bold;" disabled onchange="markDirty('Renamed project')">
+            <div id="t_id" style="opacity:0.6; font-size:0.8rem;"></div>
+            <select id="t_status" disabled onchange="markDirty('Status changed')">
+                <option value="Pending Approval">Pending Approval</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Late">Late</option>
+                <option value="Completed">Completed</option>
+            </select>
+        </header>
+
+        <div class="card" id="timelineCard">
+            <h3>Timeline & Progress</h3>
+            <div style="background:#ddd; height:10px; border-radius:10px; margin:10px 0;">
+                <div id="t_progress" style="background:var(--primary); width:0%; height:100%; border-radius:10px;"></div>
+            </div>
+            <input type="date" id="t_end" disabled onchange="markDirty('Deadline adjusted')">
+        </div>
+
+        <div class="card" id="scopeCard">
+            <h3>Project Scope</h3>
+            <textarea id="t_scope" rows="4" disabled onchange="markDirty('Scope modified')"></textarea>
+            <h4>Price: $<input type="number" id="t_price" style="width:100px" disabled onchange="markDirty('Price updated')"></h4>
+        </div>
+
+        <div class="card">
+            <h3>Feature Checklist</h3>
+            <div id="featureList"></div>
+            <div id="adminFeatureAdd" class="hidden" style="margin-top:10px;">
+                <input type="text" id="newFeatureName" placeholder="Add feature..." style="width:70%; margin:0;">
+                <button class="btn btn-primary btn-sm" onclick="addFeature()">Add</button>
+            </div>
+        </div>
+
+        <div id="historySection" class="card hidden">
+            <h3>Activity History</h3>
+            <div id="historyList" class="history-log"></div>
+        </div>
+
+        <div class="card">
+            <h3>Client Actions</h3>
+            <div id="speedupList"></div>
+            <div id="commentsList" style="margin: 15px 0;"></div>
+            <div class="row">
+                <input type="text" id="newComment" placeholder="Add a comment..." style="margin:0;">
+                <button class="btn btn-ghost btn-sm" onclick="postComment()">Send</button>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn btn-ghost" onclick="goHome()">Back to Dashboard</button>
+            <button id="saveBtn" class="btn btn-primary hidden" onclick="saveToDisk()">Save All Changes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let projects = JSON.parse(localStorage.getItem('prism_v2') || "[]");
+    let currentProj = null;
+    let isAdmin = false;
+
+    // --- Scene Controller ---
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+        isAdmin = urlParams.get('mode') === 'admin';
+
+        if (id) {
+            loadTicket(id);
+        } else {
+            renderDashboard();
+        }
+    };
+
+    function goHome() { window.location.href = window.location.pathname; }
+
+    function renderDashboard() {
+        document.getElementById('dashboardView').classList.remove('hidden');
+        document.getElementById('ticketView').classList.add('hidden');
+        document.getElementById('creatorView').classList.add('hidden');
+        
+        const list = document.getElementById('projectList');
+        list.innerHTML = projects.map(p => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
+                <div><strong>${p.name}</strong><br><small>${p.client} | ${p.status}</small></div>
+                <div>
+                    <button class="btn btn-ghost btn-sm" onclick="window.location.search='?id=${p.id}'">View</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.location.search='?id=${p.id}&mode=admin'">Edit</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function showCreator() {
+        document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('creatorView').classList.remove('hidden');
+        document.getElementById('c_end').valueAsDate = new Date(Date.now() + 6.048e+8);
+    }
+
+    function createProject() {
+        const name = document.getElementById('c_name').value;
+        if(!name) return alert("Enter project name");
+
+        const p = {
+            id: Math.random().toString(36).substr(2, 5),
+            name: name,
+            client: document.getElementById('c_client').value,
+            price: document.getElementById('c_price').value,
+            end: document.getElementById('c_end').value,
+            start: new Date().toISOString().split('T')[0],
+            status: "Pending Approval",
+            scope: "Enter project details here...",
+            features: [],
+            history: [{t: "Project created", d: new Date().toLocaleString()}],
+            comments: [],
+            speedups: [{name: "Instant Delivery", price: 150, active: false}]
+        };
+
+        projects.push(p);
+        localStorage.setItem('prism_v2', JSON.stringify(projects));
+        window.location.search = `?id=${p.id}&mode=admin`;
+    }
+
+    function loadTicket(id) {
+        currentProj = projects.find(p => p.id === id);
+        if(!currentProj) return goHome();
+
+        document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('ticketView').classList.remove('hidden');
+        updateTheme(currentProj.name);
+
+        // Map Data to UI
+        document.getElementById('t_name').value = currentProj.name;
+        document.getElementById('t_id').innerText = "ID: " + currentProj.id;
+        document.getElementById('t_status').value = currentProj.status;
+        document.getElementById('t_end').value = currentProj.end;
+        document.getElementById('t_scope').value = currentProj.scope;
+        document.getElementById('t_price').value = currentProj.price;
+
+        if (isAdmin) {
+            enableAdminUI();
+        }
+
+        renderFeatures();
+        renderHistory();
+        renderComments();
+        renderSpeedups();
+        updateProgress();
+    }
+
+    function enableAdminUI() {
+        document.getElementById('adminBadge').classList.remove('hidden');
+        document.getElementById('saveBtn').classList.remove('hidden');
+        document.getElementById('historySection').classList.remove('hidden');
+        document.getElementById('adminFeatureAdd').classList.remove('hidden');
+        
+        // Unlock Inputs
+        ['t_name', 't_status', 't_end', 't_scope', 't_price'].forEach(id => {
+            const el = document.getElementById(id);
+            el.disabled = false;
+            el.parentElement.classList.add('admin-border');
+        });
+    }
+
+    function markDirty(msg) {
+        if(!isAdmin) return;
+        currentProj.history.unshift({t: msg, d: new Date().toLocaleString()});
+        renderHistory();
+    }
+
+    function saveToDisk() {
+        currentProj.name = document.getElementById('t_name').value;
+        currentProj.status = document.getElementById('t_status').value;
+        currentProj.end = document.getElementById('t_end').value;
+        currentProj.scope = document.getElementById('t_scope').value;
+        currentProj.price = document.getElementById('t_price').value;
+
+        const idx = projects.findIndex(p => p.id === currentProj.id);
+        projects[idx] = currentProj;
+        localStorage.setItem('prism_v2', JSON.stringify(projects));
+        alert("System Updated Successfully");
+    }
+
+    // --- Helpers ---
+    function renderFeatures() {
+        const container = document.getElementById('featureList');
+        container.innerHTML = currentProj.features.map((f, i) => `
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+                <input type="checkbox" ${f.done ? 'checked' : ''} ${!isAdmin ? 'disabled' : ''} onchange="toggleFeature(${i})">
+                <span style="${f.done ? 'text-decoration:line-through; opacity:0.5' : ''}">${f.name}</span>
+            </div>
+        `).join('');
+    }
+
+    function addFeature() {
+        const val = document.getElementById('newFeatureName').value;
+        if(!val) return;
+        currentProj.features.push({name: val, done: false});
+        markDirty(`Added feature: ${val}`);
+        document.getElementById('newFeatureName').value = "";
+        renderFeatures();
+    }
+
+    function toggleFeature(i) {
+        currentProj.features[i].done = !currentProj.features[i].done;
+        markDirty(`Feature '${currentProj.features[i].name}' toggled`);
+        renderFeatures();
+    }
+
+    function renderHistory() {
+        document.getElementById('historyList').innerHTML = currentProj.history.map(h => 
+            `<div style="border-bottom:1px solid #ddd; padding:4px;"><b>${h.t}</b> <br><small>${h.d}</small></div>`
+        ).join('');
+    }
+
+    function renderComments() {
+        document.getElementById('commentsList').innerHTML = currentProj.comments.map(c => 
+            `<div style="background:white; padding:8px; border-radius:8px; margin-bottom:5px; border-left:4px solid var(--primary)">${c}</div>`
+        ).join('');
+    }
+
+    function postComment() {
+        const val = document.getElementById('newComment').value;
+        if(!val) return;
+        currentProj.comments.push((isAdmin ? "ADMIN: " : "CLIENT: ") + val);
+        document.getElementById('newComment').value = "";
+        saveToDisk();
+        renderComments();
+    }
+
+    function renderSpeedups() {
+        document.getElementById('speedupList').innerHTML = currentProj.speedups.map((s, i) => `
+            <div style="display:flex; justify-content:space-between; background:white; padding:10px; border-radius:8px; margin-bottom:5px;">
+                <span>${s.name} (+$${s.price})</span>
+                <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})">
+            </div>
+        `).join('');
+    }
+
+    function toggleSpeed(i) {
+        currentProj.speedups[i].active = !currentProj.speedups[i].active;
+        if(currentProj.speedups[i].active) currentProj.history.unshift({t: "Client requested speedup: " + currentProj.speedups[i].name, d: new Date().toLocaleString()});
+        saveToDisk();
+        renderHistory();
+    }
+
+    function updateProgress() {
+        const start = new Date(currentProj.start).getTime();
+        const end = new Date(currentProj.end).getTime();
+        const now = Date.now();
+        let pct = ((now - start) / (end - start)) * 100;
+        document.getElementById('t_progress').style.width = Math.min(100, Math.max(0, pct)) + "%";
+    }
+
+    function getHue(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        return Math.abs(hash % 360);
+    }
+
+    function updateTheme(str) { document.documentElement.style.setProperty('--hue', getHue(str)); }
+</script>
+</body>
+</html>
