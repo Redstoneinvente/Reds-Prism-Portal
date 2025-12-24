@@ -21,74 +21,58 @@
             --surface-variant: hsl(var(--hue), 20%, 94%);
             --outline: hsl(var(--hue), 10%, 80%);
             --shadow: rgba(var(--hue), 20%, 10%, 0.1);
-            
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * { box-sizing: border-box; }
         body { 
-            margin: 0; 
-            padding: 20px; 
-            background-color: var(--surface); 
-            color: #1c1b1f; 
-            font-family: 'Google Sans', 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
+            margin: 0; padding: 20px; background-color: var(--surface); color: #1c1b1f; 
+            font-family: 'Google Sans', 'Roboto', sans-serif; display: flex; justify-content: center;
         }
+
+        .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-card {
+    background: var(--surface); width: 90%; max-width: 400px;
+    padding: 24px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         .container { width: 100%; max-width: 850px; animation: fadeIn 0.6s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .card { 
-            background: var(--surface-variant); 
-            border-radius: 28px; 
-            padding: 24px; 
-            margin-bottom: 16px; 
-            border: 1px solid transparent;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background: var(--surface-variant); border-radius: 28px; padding: 24px; margin-bottom: 16px; 
+            border: 1px solid transparent; transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .card:hover { box-shadow: 0 4px 12px var(--shadow); }
 
         header {
-            background: var(--primary-container);
-            color: var(--on-primary-container);
-            padding: 40px 24px;
-            border-radius: 32px;
-            text-align: center;
-            margin-bottom: 24px;
-            position: relative;
-            overflow: hidden;
+            background: var(--primary-container); color: var(--on-primary-container);
+            padding: 40px 24px; border-radius: 32px; text-align: center; margin-bottom: 24px;
+            position: relative; overflow: hidden;
         }
 
         .field-group { margin-bottom: 20px; }
         label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 8px; color: var(--primary); margin-left: 4px; }
         
         input, textarea, select {
-            width: 100%; 
-            padding: 16px; 
-            border-radius: 12px;
-            border: 1px solid var(--outline);
-            background: #ffffff;
-            font-size: 1rem;
-            transition: border 0.3s, background 0.3s;
+            width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--outline);
+            background: #ffffff; font-size: 1rem; transition: border 0.3s, background 0.3s;
         }
         input:focus { outline: none; border: 2px solid var(--primary); background: #fff; }
-        
         input:disabled, textarea:disabled, select:disabled {
             background: transparent; border: 1px solid transparent; padding-left: 4px; color: #1c1b1f; font-weight: 500; appearance: none;
         }
 
         .btn {
-            padding: 12px 24px;
-            border-radius: 100px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            font-family: 'Google Sans', sans-serif;
+            padding: 12px 24px; border-radius: 100px; border: none; cursor: pointer;
+            font-weight: 500; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.2s; font-family: 'Google Sans', sans-serif;
         }
         .btn-filled { background: var(--primary); color: var(--on-primary); }
         .btn-filled:hover { opacity: 0.9; transform: scale(1.02); box-shadow: 0 2px 8px var(--shadow); }
@@ -111,22 +95,15 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
-        #historyList {
-            max-height: 300px;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-
+        #historyList { max-height: 300px; overflow-y: auto; padding-right: 8px; }
         .admin-only { border: 2px dashed var(--primary); background: rgba(255,255,255,0.6); }
         .badge-admin { background: var(--primary); color: white; padding: 4px 12px; border-radius: 10px; font-size: 11px; letter-spacing: 1px; }
-
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    
     <div id="dashboardView">
         <h1 style="font-size: 2.5rem; letter-spacing: -1px;">Prism <span style="font-weight: 400; opacity: 0.5;">Portal</span></h1>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
@@ -230,8 +207,24 @@
             </div>
         </div>
 
+<div id="featureRequestSection" class="card" style="border: 2px solid var(--primary-container);">
+    <h3 style="margin-top:0">Request New Feature</h3>
+    <div id="requestList"></div>
+    
+    <div id="clientRequestForm" class="hidden">
+        <input type="text" id="req_name" placeholder="Feature Name" style="margin-bottom:8px">
+        <textarea id="req_desc" placeholder="Describe what you need..." rows="2"></textarea>
+        <button class="btn btn-filled" style="width:100%; margin-top:10px" onclick="submitRequest()">Submit Request</button>
+    </div>
+</div>
+
         <div class="card" style="background: var(--primary-container); color: var(--on-primary-container);">
-            <h3 style="margin-top:0">Client Collaboration</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin:0">Client Collaboration</h3>
+                <div id="adminAddonControl" class="hidden">
+                    <button class="btn btn-tonal btn-sm" onclick="addAddonPrompt()" style="background:white">+ Add New Option</button>
+                </div>
+            </div>
             <div id="speedupList" style="margin-bottom: 20px;"></div>
             <div id="commentsList" style="margin-bottom: 20px;"></div>
             <div style="display: flex; gap: 8px; background: white; padding: 8px; border-radius: 16px;">
@@ -249,7 +242,6 @@
 </div>
 
 <script>
-    // --- FIREBASE CONFIGURATION ---
     const firebaseConfig = {
         apiKey: "AIzaSyBYXOcbODnX935TjblP1dhc21uDaSJBzLs",
         authDomain: "reds-prismportal.firebaseapp.com",
@@ -261,34 +253,25 @@
         measurementId: "G-X026E8YW3T"
     };
 
-    // Initialize Firebase (Using Compat version based on your script tags)
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- APP STATE ---
     let projects = [];
     let currentProj = null;
     let isAdmin = false;
 
-    // --- INITIALIZATION ---
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
         isAdmin = urlParams.get('mode') === 'admin';
 
-        // Listen for data changes in real-time
         db.ref("projects").on("value", (snapshot) => {
             const data = snapshot.val();
-            // Convert Firebase object {id: {data}} to array [data]
             projects = data ? Object.values(data) : [];
             
             if (id) {
                 currentProj = projects.find(p => p.id === id);
-                if (currentProj) {
-                    loadTicketUI();
-                } else {
-                    goHome();
-                }
+                if (currentProj) loadTicketUI(); else goHome();
             } else {
                 renderDashboard();
             }
@@ -297,18 +280,15 @@
 
     function goHome() { window.location.href = window.location.pathname; }
 
-    // --- DASHBOARD ---
     function renderDashboard() {
         document.getElementById('dashboardView').classList.remove('hidden');
         document.getElementById('ticketView').classList.add('hidden');
         document.getElementById('creatorView').classList.add('hidden');
-        
         const list = document.getElementById('projectList');
         if(projects.length === 0) {
-            list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found. Create your first ticket to get started.</div>`;
+            list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found.</div>`;
             return;
         }
-        
         list.innerHTML = projects.map(p => `
             <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -316,7 +296,7 @@
                     <div style="font-size:0.85rem; opacity:0.6;">${p.client} • ${p.status}</div>
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">Client View</button>
+                    <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">View</button>
                     <button class="btn btn-filled btn-sm" onclick="window.location.search='?id=${p.id}&mode=admin'">Manage</button>
                     <button class="btn btn-outline btn-sm" style="color:red" onclick="deleteProject('${p.id}')">Delete</button>
                 </div>
@@ -324,7 +304,6 @@
         `).join('');
     }
 
-    // --- CREATE ---
     function showCreator() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('creatorView').classList.remove('hidden');
@@ -334,30 +313,21 @@
     function createProject() {
         const name = document.getElementById('c_name').value;
         if(!name) return;
-        
         const newId = Math.random().toString(36).substr(2, 6).toUpperCase();
         const p = {
-            id: newId,
-            name: name,
-            client: document.getElementById('c_client').value || "Guest",
-            price: document.getElementById('c_price').value,
+            id: newId, name: name, client: document.getElementById('c_client').value || "Guest",
+            price: parseFloat(document.getElementById('c_price').value),
             end: document.getElementById('c_end').value,
             start: new Date().toISOString().split('T')[0],
-            status: "Pending Approval",
-            scope: "Describe the deliverables here...",
-            features: [],
-            history: [{t: "Project Created", d: new Date().toLocaleString()}],
-            comments: [],
-            speedups: [{name: "Priority Support", price: 100, active: false}, {name: "Weekend Rush", price: 250, active: false}]
+            status: "Pending Approval", scope: "Describe deliverables...",
+            features: [], history: [{t: "Project Created", d: new Date().toLocaleString()}],
+            comments: [], speedups: []
         };
-
-        // Push to Firebase
         db.ref("projects/" + newId).set(p).then(() => {
             window.location.search = `?id=${p.id}&mode=admin`;
         });
     }
 
-    // --- TICKET VIEW ---
     function loadTicketUI() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('ticketView').classList.remove('hidden');
@@ -368,8 +338,11 @@
         document.getElementById('t_status').value = currentProj.status;
         document.getElementById('t_end').value = currentProj.end;
         document.getElementById('t_scope').value = currentProj.scope;
-        document.getElementById('t_price').value = currentProj.price;
-        
+
+        const displayPrice = currentProj.totalDisplayPrice || currentProj.price;
+        document.getElementById('t_price').value = displayPrice;
+        document.getElementById('t_price').style.color = (currentProj.totalDisplayPrice > currentProj.price) ? "#2e7d32" : "inherit";
+
         const shareUrl = new URL(window.location.href);
         shareUrl.searchParams.set('id', currentProj.id);
         shareUrl.searchParams.delete('mode'); 
@@ -378,23 +351,23 @@
         if (isAdmin) {
             document.getElementById('adminHeader').classList.remove('hidden');
             document.getElementById('adminFeatureAdd').classList.remove('hidden');
+            document.getElementById('adminAddonControl').classList.remove('hidden');
             ['t_name', 't_status', 't_end', 't_scope', 't_price'].forEach(id => {
                 const el = document.getElementById(id);
-                el.disabled = false;
-                el.classList.add('admin-only');
+                el.disabled = false; el.classList.add('admin-only');
             });
         }
 
-        const displayPrice = currentProj.totalDisplayPrice || currentProj.price;
-        document.getElementById('t_price').value = displayPrice;
-
-        // Optional: Add a visual indicator if addons are active
-        const priceInput = document.getElementById('t_price');
-        if (currentProj.totalDisplayPrice > currentProj.price) {
-            priceInput.style.color = "#2e7d32"; // Success Green
+        const shareSection = document.getElementById('shareSection');
+        if (isAdmin) {
+            shareSection.classList.remove('hidden');
         } else {
-            priceInput.style.color = "inherit";
+            shareSection.classList.add('hidden');
         }
+
+        // Show form to client if no pending request, otherwise show status
+    document.getElementById('clientRequestForm').classList.toggle('hidden', isAdmin);
+    renderRequests();
 
         renderFeatures();
         renderHistory();
@@ -403,53 +376,126 @@
         updateProgress();
     }
 
-   function saveToFirebase() {
+async function submitRequest() {
+    const name = document.getElementById('req_name').value;
+    const desc = document.getElementById('req_desc').value;
+    if(!name || !desc) return;
+
+    if(!currentProj.requests) currentProj.requests = [];
+    currentProj.requests.push({
+        id: Date.now(),
+        name: name,
+        desc: desc,
+        status: 'pending_dev', // Waiting for Dev to price it
+        price: 0,
+        days: 0
+    });
+
+    markDirty(`Client requested feature: ${name}`);
+    saveToFirebase();
+    document.getElementById('req_name').value = "";
+    document.getElementById('req_desc').value = "";
+}
+
+async function devReviewRequest(reqId) {
+    const req = currentProj.requests.find(r => r.id === reqId);
+    const price = parseFloat(await showModal("Quote Price", `Price for ${req.name}:`, true, "100")) || 0;
+    const days = parseInt(await showModal("Add Days", "Extra delivery days:", true, "2")) || 0;
+
+    req.price = price;
+    req.days = days;
+    req.status = 'pending_client'; // Waiting for Client to pay/accept
+    
+    markDirty(`Dev quoted $${price} and ${days} days for ${req.name}`);
+    saveToFirebase();
+}
+
+function clientAcceptRequest(reqId) {
+    const index = currentProj.requests.findIndex(r => r.id === reqId);
+    const req = currentProj.requests[index];
+
+    // 1. Permanentally add to project
+    if(!currentProj.features) currentProj.features = [];
+    currentProj.features.push({name: req.name + " (Add-on)", done: false});
+
+    // 2. Update Price & Date
+    currentProj.price = (parseFloat(currentProj.price) || 0) + req.price;
+    
+    let d = new Date(currentProj.end);
+    d.setDate(d.getDate() + req.days);
+    currentProj.end = d.toISOString().split('T')[0];
+
+    // 3. Remove from requests
+    currentProj.requests.splice(index, 1);
+
+    markDirty(`Client Approved & Added: ${req.name}`);
+    saveToFirebase();
+}
+
+function renderRequests() {
+    const list = document.getElementById('requestList');
+    const reqs = currentProj.requests || [];
+    
+    if(reqs.length === 0) {
+        list.innerHTML = `<p style="opacity:0.5; font-size:0.8rem;">No active requests.</p>`;
+        return;
+    }
+
+    list.innerHTML = reqs.map(r => `
+        <div style="background:white; padding:16px; border-radius:16px; margin-bottom:12px; border: 1px solid var(--outline);">
+            <div style="font-weight:700;">${r.name}</div>
+            <div style="font-size:0.85rem; opacity:0.7; margin-bottom:10px;">${r.desc}</div>
+            
+            ${r.status === 'pending_dev' ? `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="badge-admin" style="background:#666">WAITING FOR DEV QUOTE</span>
+                    ${isAdmin ? `<button class="btn btn-tonal btn-sm" onclick="devReviewRequest(${r.id})">Send Quote</button>` : ''}
+                </div>
+            ` : `
+                <div style="background:var(--primary-container); padding:10px; border-radius:8px; margin-bottom:10px;">
+                    <div style="font-weight:bold; color:var(--on-primary-container)">Quote: +$${r.price} & +${r.days} days</div>
+                </div>
+                ${!isAdmin ? `
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept & Add to Project</button>
+                        <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})">Decline</button>
+                    </div>
+                ` : `<span style="font-size:0.8rem; opacity:0.5;">Waiting for client approval...</span>`}
+            `}
+        </div>
+    `).join('');
+}
+
+    function saveToFirebase() {
         if (!currentProj) return;
-        
-        // 1. Update project data from UI fields if Admin
         if (isAdmin) {
             currentProj.name = document.getElementById('t_name').value;
             currentProj.status = document.getElementById('t_status').value;
             currentProj.end = document.getElementById('t_end').value;
             currentProj.scope = document.getElementById('t_scope').value;
-            // This is the "Base Price"
             currentProj.price = parseFloat(document.getElementById('t_price').value) || 0;
         }
-
-        // 2. Calculate Total Price (Base Price + Active Speedups)
         let basePrice = parseFloat(currentProj.price) || 0;
-        let addonsTotal = 0;
-        
-        if (currentProj.speedups) {
-            addonsTotal = currentProj.speedups
-                .filter(s => s.active)
-                .reduce((sum, s) => sum + s.price, 0);
-        }
-
-        // We store the calculated total separately so the UI can show it
+        let addonsTotal = (currentProj.speedups || []).filter(s => s.active).reduce((sum, s) => sum + s.price, 0);
         currentProj.totalDisplayPrice = basePrice + addonsTotal;
 
-        // 3. Sync to Firebase
-        db.ref("projects/" + currentProj.id).update(currentProj).then(() => {
-            console.log("Synced with Firebase: Total is $" + currentProj.totalDisplayPrice);
-        });
+        db.ref("projects/" + currentProj.id).update(currentProj);
     }
 
-    // Re-linking your existing buttons to the sync function
-    function saveToDisk() {
-        saveToFirebase();
-        alert("Success: Cloud database updated.");
-    }
+    function saveToDisk() { saveToFirebase(); alert("Synced to Cloud."); }
 
-    // --- FEATURE LOGIC ---
-    function addFeaturePrompt() {
-        const f = prompt("Enter feature name:");
-        if(!f) return;
-        if(!currentProj.features) currentProj.features = [];
-        currentProj.features.push({name: f, done: false});
-        markDirty(`Added feature: ${f}`);
-        saveToFirebase();
-    }
+    async function addFeaturePrompt() {
+    const f = await showModal("Add Feature", "Enter the name of the new deliverable:", true);
+    
+    // If the user cancels or leaves it empty, do nothing
+    if(!f || f.trim() === "") return;
+
+    if(!currentProj.features) currentProj.features = [];
+    currentProj.features.push({name: f, done: false});
+    
+    markDirty(`Added feature: ${f}`);
+    saveToFirebase();
+}
 
     function toggleFeature(i) {
         if(!isAdmin) return;
@@ -458,66 +504,88 @@
         saveToFirebase();
     }
 
-    function postComment() {
-        const el = document.getElementById('newComment');
-        if(!el.value) return;
-        const msg = `<b>${isAdmin ? 'Developer' : 'Client'}:</b> ${el.value}`;
-        if(!currentProj.comments) currentProj.comments = [];
-        currentProj.comments.unshift(msg);
-        el.value = "";
-        saveToFirebase();
-    }
-
-    function toggleSpeed(i) {
-        // Client-side toggle
-        currentProj.speedups[i].active = !currentProj.speedups[i].active;
-        
-        const action = currentProj.speedups[i].active ? "requested" : "removed";
-        markDirty(`Client ${action} ${currentProj.speedups[i].name}`);
-        
-        // Trigger the recalculation and save
-        saveToFirebase();
-    }
-
-    // --- RENDERERS ---
-    function renderFeatures() {
-        const list = document.getElementById('featureList');
-        const feats = currentProj.features || [];
-        if(feats.length === 0) list.innerHTML = `<p style="opacity:0.4; font-size:0.8rem;">No features listed yet.</p>`;
-        else list.innerHTML = feats.map((f, i) => `
-            <div class="feature-item ${f.done ? 'done' : ''}" onclick="toggleFeature(${i})" style="cursor:${isAdmin?'pointer':'default'}">
-                <span class="material-symbols-outlined" style="color:${f.done ? 'var(--primary)' : '#ccc'}">
-                    ${f.done ? 'check_circle' : 'radio_button_unchecked'}
-                </span>
-                <span>${f.name}</span>
+    function renderSpeedups() {
+        const list = document.getElementById('speedupList');
+        const items = currentProj.speedups || [];
+        list.innerHTML = items.map((s, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px;">
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:0.9rem; font-weight:500;">${s.name} (+$${s.price})</span>
+                    ${s.days ? `<span style="font-size:0.7rem; opacity:0.7;">+${s.days} days to delivery</span>` : ''}
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    ${isAdmin ? `<button onclick="removeAddon(${i})" style="background:none; border:none; color:red; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>` : ''}
+                    <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px;">
+                </div>
             </div>
         `).join('');
     }
 
+    async function addAddonPrompt() {
+    const name = await showModal("New Add-on", "What is the name of this service?", true);
+    if (!name) return;
+    const price = parseFloat(await showModal("Price", "Enter price in USD:", true, "50")) || 0;
+    const days = parseInt(await showModal("Timeline", "Extra days added?", true, "0")) || 0;
+    
+    if (!currentProj.speedups) currentProj.speedups = [];
+    currentProj.speedups.push({ name, price, days, active: false });
+    markDirty(`Dev added option: ${name}`);
+    saveToFirebase();
+}
+
+    function removeAddon(i) {
+        if (!confirm("Remove?")) return;
+        currentProj.speedups.splice(i, 1);
+        saveToFirebase();
+    }
+
+    function toggleSpeed(i) {
+        const item = currentProj.speedups[i];
+        item.active = !item.active;
+        markDirty(`Client ${item.active ? 'requested' : 'removed'} ${item.name}`);
+        if (item.days > 0) {
+            let d = new Date(currentProj.end);
+            d.setDate(d.getDate() + (item.active ? item.days : -item.days));
+            currentProj.end = d.toISOString().split('T')[0];
+        }
+        saveToFirebase();
+    }
+
+    function postComment() {
+        const el = document.getElementById('newComment');
+        if(!el.value) return;
+        if(!currentProj.comments) currentProj.comments = [];
+        currentProj.comments.unshift(`<b>${isAdmin ? 'Developer' : 'Client'}:</b> ${el.value}`);
+        el.value = "";
+        saveToFirebase();
+    }
+
+    function renderFeatures() {
+        const list = document.getElementById('featureList');
+        const feats = currentProj.features || [];
+        list.innerHTML = feats.length === 0 ? `<p style="opacity:0.4; font-size:0.8rem;">No features.</p>` : 
+            feats.map((f, i) => `
+                <div class="feature-item ${f.done ? 'done' : ''}" onclick="toggleFeature(${i})" style="cursor:${isAdmin?'pointer':'default'}">
+                    <span class="material-symbols-outlined" style="color:${f.done ? 'var(--primary)' : '#ccc'}">
+                        ${f.done ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                    <span>${f.name}</span>
+                </div>
+            `).join('');
+    }
+
     function renderHistory() {
-        const hist = currentProj.history || [];
-        document.getElementById('historyList').innerHTML = hist.map(h => 
+        document.getElementById('historyList').innerHTML = (currentProj.history || []).map(h => 
             `<div class="history-entry"><b>${h.t}</b><br><span style="opacity:0.5">${h.d}</span></div>`
         ).join('');
     }
 
     function renderComments() {
-        const comms = currentProj.comments || [];
-        document.getElementById('commentsList').innerHTML = comms.map(c => 
+        document.getElementById('commentsList').innerHTML = (currentProj.comments || []).map(c => 
             `<div style="background:rgba(255,255,255,0.7); padding:12px; border-radius:12px; margin-bottom:8px; font-size:0.9rem;">${c}</div>`
         ).join('');
     }
 
-    function renderSpeedups() {
-        document.getElementById('speedupList').innerHTML = currentProj.speedups.map((s, i) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px;">
-                <span style="font-size:0.9rem;">${s.name} (+$${s.price})</span>
-                <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px;">
-            </div>
-        `).join('');
-    }
-
-    // --- HELPERS ---
     function updateProgress() {
         const start = new Date(currentProj.start).getTime();
         const end = new Date(currentProj.end).getTime();
@@ -532,9 +600,7 @@
         return Math.abs(hash % 360);
     }
 
-    function updateTheme(str) { 
-        document.documentElement.style.setProperty('--hue', getHue(str)); 
-    }
+    function updateTheme(str) { document.documentElement.style.setProperty('--hue', getHue(str)); }
 
     function markDirty(msg) {
         if(!currentProj.history) currentProj.history = [];
@@ -542,16 +608,57 @@
     }
 
     function copyLink() {
-        const copyText = document.getElementById("clientLink");
-        copyText.select();
-        document.execCommand("copy");
-        alert("Link copied to clipboard!");
+        const el = document.getElementById("clientLink");
+        el.select(); document.execCommand("copy"); alert("Link copied!");
     }
 
-    function deleteProject(id) {
-        if(!confirm("Are you sure? This cannot be undone.")) return;
-        db.ref("projects/" + id).remove();
-    }
+    async function deleteProject(id) {
+    const confirmed = await showModal("Delete Project", "Are you sure? This cannot be undone.");
+    if(confirmed) db.ref("projects/" + id).remove();
+}
+
+    async function showModal(title, body, hasInput = false, defaultValue = "") {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('customModal');
+        const inputContainer = document.getElementById('modalInputContainer');
+        const input = document.getElementById('modalInput');
+        
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalBody').innerText = body;
+        modal.classList.remove('hidden');
+        
+        if (hasInput) {
+            inputContainer.classList.remove('hidden');
+            input.value = defaultValue;
+            input.focus();
+        } else {
+            inputContainer.classList.add('hidden');
+        }
+
+        document.getElementById('modalConfirm').onclick = () => {
+            modal.classList.add('hidden');
+            resolve(hasInput ? input.value : true);
+        };
+        document.getElementById('modalCancel').onclick = () => {
+            modal.classList.add('hidden');
+            resolve(null);
+        };
+    });
+}
 </script>
+
+<div id="customModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h3 id="modalTitle">Title</h3>
+        <p id="modalBody" style="opacity: 0.7; font-size: 0.9rem; margin-bottom: 20px;"></p>
+        <div id="modalInputContainer" class="hidden">
+            <input type="text" id="modalInput" style="margin-bottom: 15px;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button class="btn btn-outline" id="modalCancel">Cancel</button>
+            <button class="btn btn-filled" id="modalConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
