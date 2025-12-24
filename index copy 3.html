@@ -392,35 +392,20 @@
         updateProgress();
     }
 
-   function saveToFirebase() {
+    function saveToFirebase() {
         if (!currentProj) return;
         
-        // 1. Update project data from UI fields if Admin
+        // Update currentProj object from UI fields if Admin
         if (isAdmin) {
             currentProj.name = document.getElementById('t_name').value;
             currentProj.status = document.getElementById('t_status').value;
             currentProj.end = document.getElementById('t_end').value;
             currentProj.scope = document.getElementById('t_scope').value;
-            // This is the "Base Price"
-            currentProj.price = parseFloat(document.getElementById('t_price').value) || 0;
+            currentProj.price = document.getElementById('t_price').value;
         }
 
-        // 2. Calculate Total Price (Base Price + Active Speedups)
-        let basePrice = parseFloat(currentProj.price) || 0;
-        let addonsTotal = 0;
-        
-        if (currentProj.speedups) {
-            addonsTotal = currentProj.speedups
-                .filter(s => s.active)
-                .reduce((sum, s) => sum + s.price, 0);
-        }
-
-        // We store the calculated total separately so the UI can show it
-        currentProj.totalDisplayPrice = basePrice + addonsTotal;
-
-        // 3. Sync to Firebase
         db.ref("projects/" + currentProj.id).update(currentProj).then(() => {
-            console.log("Synced with Firebase: Total is $" + currentProj.totalDisplayPrice);
+            console.log("Synced with Firebase");
         });
     }
 
@@ -458,13 +443,8 @@
     }
 
     function toggleSpeed(i) {
-        // Client-side toggle
         currentProj.speedups[i].active = !currentProj.speedups[i].active;
-        
-        const action = currentProj.speedups[i].active ? "requested" : "removed";
-        markDirty(`Client ${action} ${currentProj.speedups[i].name}`);
-        
-        // Trigger the recalculation and save
+        if(currentProj.speedups[i].active) markDirty(`Client requested ${currentProj.speedups[i].name}`);
         saveToFirebase();
     }
 
