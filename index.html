@@ -249,60 +249,66 @@
 </div>
 
 <script>
-    import { initializeApp } from "firebase/app";
-    import { getAnalytics } from "firebase/analytics";
-
-    let projects = JSON.parse(localStorage.getItem('prism_v3') || "[]");
-    let currentProj = null;
-    let isAdmin = false;
-
+    // --- FIREBASE CONFIGURATION ---
     const firebaseConfig = {
-    apiKey: "AIzaSyBYXOcbODnX935TjblP1dhc21uDaSJBzLs",
-    authDomain: "reds-prismportal.firebaseapp.com",
-    databaseURL: "https://reds-prismportal-default-rtdb.firebaseio.com",
-    projectId: "reds-prismportal",
-    storageBucket: "reds-prismportal.firebasestorage.app",
-    messagingSenderId: "404043779432",
-    appId: "1:404043779432:web:02e011e50aab507b6ddadd",
-    measurementId: "G-X026E8YW3T"
+        apiKey: "AIzaSyBYXOcbODnX935TjblP1dhc21uDaSJBzLs",
+        authDomain: "reds-prismportal.firebaseapp.com",
+        databaseURL: "https://reds-prismportal-default-rtdb.firebaseio.com",
+        projectId: "reds-prismportal",
+        storageBucket: "reds-prismportal.firebasestorage.app",
+        messagingSenderId: "404043779432",
+        appId: "1:404043779432:web:02e011e50aab507b6ddadd",
+        measurementId: "G-X026E8YW3T"
     };
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-
-    // Initialize Firebase
+    // Initialize Firebase (Using Compat version based on your script tags)
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Instead of loading from local storage, listen to the DB
-    function syncWithFirebase() {
-        db.ref("projects").on("value", (snapshot) => {
-            projects = snapshot.val() ? Object.values(snapshot.val()) : [];
-            // Trigger your UI renders here
-            if (!currentProj) renderDashboard();
-            else loadTicket(currentProj.id);
-        });
-    }
+    // --- APP STATE ---
+    let projects = [];
+    let currentProj = null;
+    let isAdmin = false;
 
+    // --- INITIALIZATION ---
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
         isAdmin = urlParams.get('mode') === 'admin';
-        if (id) loadTicket(id); else renderDashboard();
+
+        // Listen for data changes in real-time
+        db.ref("projects").on("value", (snapshot) => {
+            const data = snapshot.val();
+            // Convert Firebase object {id: {data}} to array [data]
+            projects = data ? Object.values(data) : [];
+            
+            if (id) {
+                currentProj = projects.find(p => p.id === id);
+                if (currentProj) {
+                    loadTicketUI();
+                } else {
+                    goHome();
+                }
+            } else {
+                renderDashboard();
+            }
+        });
     };
 
     function goHome() { window.location.href = window.location.pathname; }
 
+    // --- DASHBOARD ---
     function renderDashboard() {
         document.getElementById('dashboardView').classList.remove('hidden');
         document.getElementById('ticketView').classList.add('hidden');
         document.getElementById('creatorView').classList.add('hidden');
+        
         const list = document.getElementById('projectList');
         if(projects.length === 0) {
             list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found. Create your first ticket to get started.</div>`;
             return;
         }
+        
         list.innerHTML = projects.map(p => `
             <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -318,6 +324,7 @@
         `).join('');
     }
 
+    // --- CREATE ---
     function showCreator() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('creatorView').classList.remove('hidden');
@@ -327,8 +334,10 @@
     function createProject() {
         const name = document.getElementById('c_name').value;
         if(!name) return;
+        
+        const newId = Math.random().toString(36).substr(2, 6).toUpperCase();
         const p = {
-            id: Math.random().toString(36).substr(2, 6).toUpperCase(),
+            id: newId,
             name: name,
             client: document.getElementById('c_client').value || "Guest",
             price: document.getElementById('c_price').value,
@@ -341,15 +350,15 @@
             comments: [],
             speedups: [{name: "Priority Support", price: 100, active: false}, {name: "Weekend Rush", price: 250, active: false}]
         };
-        projects.push(p);
-        localStorage.setItem('prism_v3', JSON.stringify(projects));
-        window.location.search = `?id=${p.id}&mode=admin`;
+
+        // Push to Firebase
+        db.ref("projects/" + newId).set(p).then(() => {
+            window.location.search = `?id=${p.id}&mode=admin`;
+        });
     }
 
-    function loadTicket(id) {
-        currentProj = projects.find(p => p.id === id);
-        if(!currentProj) return goHome();
-        
+    // --- TICKET VIEW ---
+    function loadTicketUI() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('ticketView').classList.remove('hidden');
         updateTheme(currentProj.name);
@@ -360,10 +369,10 @@
         document.getElementById('t_end').value = currentProj.end;
         document.getElementById('t_scope').value = currentProj.scope;
         document.getElementById('t_price').value = currentProj.price;
-        //document.getElementById('clientLink').value = window.location.origin + window.location.pathname + "?id=" + currentProj.id;
+        
         const shareUrl = new URL(window.location.href);
         shareUrl.searchParams.set('id', currentProj.id);
-        shareUrl.searchParams.delete('mode'); // Ensure the client doesn't get admin mode!
+        shareUrl.searchParams.delete('mode'); 
         document.getElementById('clientLink').value = shareUrl.href;
 
         if (isAdmin) {
@@ -383,47 +392,68 @@
         updateProgress();
     }
 
-    function saveToDisk() {
-        currentProj.name = document.getElementById('t_name').value;
-        currentProj.status = document.getElementById('t_status').value;
-        currentProj.end = document.getElementById('t_end').value;
-        currentProj.scope = document.getElementById('t_scope').value;
-        currentProj.price = document.getElementById('t_price').value;
-        const idx = projects.findIndex(p => p.id === currentProj.id);
-        projects[idx] = currentProj;
-        localStorage.setItem('prism_v3', JSON.stringify(projects));
-        alert("Success: Project database updated.");
+    function saveToFirebase() {
+        if (!currentProj) return;
+        
+        // Update currentProj object from UI fields if Admin
+        if (isAdmin) {
+            currentProj.name = document.getElementById('t_name').value;
+            currentProj.status = document.getElementById('t_status').value;
+            currentProj.end = document.getElementById('t_end').value;
+            currentProj.scope = document.getElementById('t_scope').value;
+            currentProj.price = document.getElementById('t_price').value;
+        }
+
+        db.ref("projects/" + currentProj.id).update(currentProj).then(() => {
+            console.log("Synced with Firebase");
+        });
     }
 
+    // Re-linking your existing buttons to the sync function
+    function saveToDisk() {
+        saveToFirebase();
+        alert("Success: Cloud database updated.");
+    }
+
+    // --- FEATURE LOGIC ---
     function addFeaturePrompt() {
         const f = prompt("Enter feature name:");
         if(!f) return;
+        if(!currentProj.features) currentProj.features = [];
         currentProj.features.push({name: f, done: false});
         markDirty(`Added feature: ${f}`);
-        renderFeatures();
+        saveToFirebase();
     }
 
     function toggleFeature(i) {
         if(!isAdmin) return;
         currentProj.features[i].done = !currentProj.features[i].done;
         markDirty(`Checked off ${currentProj.features[i].name}`);
-        renderFeatures();
+        saveToFirebase();
     }
 
     function postComment() {
         const el = document.getElementById('newComment');
         if(!el.value) return;
         const msg = `<b>${isAdmin ? 'Developer' : 'Client'}:</b> ${el.value}`;
+        if(!currentProj.comments) currentProj.comments = [];
         currentProj.comments.unshift(msg);
         el.value = "";
-        saveToDisk();
-        renderComments();
+        saveToFirebase();
     }
 
+    function toggleSpeed(i) {
+        currentProj.speedups[i].active = !currentProj.speedups[i].active;
+        if(currentProj.speedups[i].active) markDirty(`Client requested ${currentProj.speedups[i].name}`);
+        saveToFirebase();
+    }
+
+    // --- RENDERERS ---
     function renderFeatures() {
         const list = document.getElementById('featureList');
-        if(currentProj.features.length === 0) list.innerHTML = `<p style="opacity:0.4; font-size:0.8rem;">No features listed yet.</p>`;
-        else list.innerHTML = currentProj.features.map((f, i) => `
+        const feats = currentProj.features || [];
+        if(feats.length === 0) list.innerHTML = `<p style="opacity:0.4; font-size:0.8rem;">No features listed yet.</p>`;
+        else list.innerHTML = feats.map((f, i) => `
             <div class="feature-item ${f.done ? 'done' : ''}" onclick="toggleFeature(${i})" style="cursor:${isAdmin?'pointer':'default'}">
                 <span class="material-symbols-outlined" style="color:${f.done ? 'var(--primary)' : '#ccc'}">
                     ${f.done ? 'check_circle' : 'radio_button_unchecked'}
@@ -434,13 +464,15 @@
     }
 
     function renderHistory() {
-        document.getElementById('historyList').innerHTML = currentProj.history.map(h => 
+        const hist = currentProj.history || [];
+        document.getElementById('historyList').innerHTML = hist.map(h => 
             `<div class="history-entry"><b>${h.t}</b><br><span style="opacity:0.5">${h.d}</span></div>`
         ).join('');
     }
 
     function renderComments() {
-        document.getElementById('commentsList').innerHTML = currentProj.comments.map(c => 
+        const comms = currentProj.comments || [];
+        document.getElementById('commentsList').innerHTML = comms.map(c => 
             `<div style="background:rgba(255,255,255,0.7); padding:12px; border-radius:12px; margin-bottom:8px; font-size:0.9rem;">${c}</div>`
         ).join('');
     }
@@ -454,12 +486,7 @@
         `).join('');
     }
 
-    function toggleSpeed(i) {
-        currentProj.speedups[i].active = !currentProj.speedups[i].active;
-        if(currentProj.speedups[i].active) markDirty(`Client requested ${currentProj.speedups[i].name}`);
-        saveToDisk();
-    }
-
+    // --- HELPERS ---
     function updateProgress() {
         const start = new Date(currentProj.start).getTime();
         const end = new Date(currentProj.end).getTime();
@@ -479,8 +506,8 @@
     }
 
     function markDirty(msg) {
+        if(!currentProj.history) currentProj.history = [];
         currentProj.history.unshift({t: msg, d: new Date().toLocaleString()});
-        renderHistory();
     }
 
     function copyLink() {
@@ -492,9 +519,7 @@
 
     function deleteProject(id) {
         if(!confirm("Are you sure? This cannot be undone.")) return;
-        projects = projects.filter(p => p.id !== id);
-        localStorage.setItem('prism_v3', JSON.stringify(projects));
-        renderDashboard();
+        db.ref("projects/" + id).remove();
     }
 </script>
 </body>
