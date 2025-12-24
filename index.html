@@ -385,6 +385,17 @@
             });
         }
 
+        const displayPrice = currentProj.totalDisplayPrice || currentProj.price;
+        document.getElementById('t_price').value = displayPrice;
+
+        // Optional: Add a visual indicator if addons are active
+        const priceInput = document.getElementById('t_price');
+        if (currentProj.totalDisplayPrice > currentProj.price) {
+            priceInput.style.color = "#2e7d32"; // Success Green
+        } else {
+            priceInput.style.color = "inherit";
+        }
+
         renderFeatures();
         renderHistory();
         renderComments();
