@@ -31,6 +31,75 @@
             font-family: 'Google Sans', 'Roboto', sans-serif; display: flex; justify-content: center;
         }
 
+        @media print {
+    .print-only {
+        display: block !important;
+    }
+}
+
+@media print {
+    /* Hide all UI elements that shouldn't be on a static document */
+    .no-print, .btn, #adminHeader, #shareSection, #adminFeatureAdd, #adminAddonControl, .modal-overlay {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        padding: 0;
+    }
+
+    .container {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .card {
+        border: 1px solid #eee !important;
+        break-inside: avoid;
+        box-shadow: none !important;
+    }
+
+    /* Force background colors to show in PDF */
+    header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background-color: var(--primary-container) !important;
+    }
+
+    .progress-fill {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+        .spinner {
+    width: 48px;
+    height: 48px;
+    border: 5px solid var(--primary-container);
+    border-bottom-color: var(--primary);
+    border-radius: 50%;
+    display: inline-block;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Ensure views are hidden by default to prevent flickering */
+#dashboardView, #ticketView, #creatorView, #loginView {
+    display: none;
+}
+
+/* Show them only when the .hidden class is NOT present */
+#dashboardView:not(.hidden), 
+#ticketView:not(.hidden), 
+#creatorView:not(.hidden), 
+#loginView:not(.hidden) {
+    display: block;
+}
+
         @keyframes pulse {
     0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
     70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
@@ -115,6 +184,13 @@
     </style>
 </head>
 <body>
+
+<div id="loadingView" class="modal-overlay" style="background: var(--surface); z-index: 2000;">
+    <div style="text-align: center;">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px; font-weight: 500; color: var(--primary); letter-spacing: 1px;">SYNCING PRISM...</p>
+    </div>
+</div>
 
 <div class="container">
     <div id="loginView" class="hidden">
@@ -260,18 +336,19 @@
                     <div id="historyList"></div>
                 </div>
             </div>
+        
         </div>
 
-<div id="featureRequestSection" class="card" style="border: 2px solid var(--primary-container);">
-    <h3 style="margin-top:0">Request New Feature</h3>
-    <div id="requestList"></div>
-    
-    <div id="clientRequestForm" class="hidden">
-        <input type="text" id="req_name" placeholder="Feature Name" style="margin-bottom:8px">
-        <textarea id="req_desc" placeholder="Describe what you need..." rows="2"></textarea>
-        <button class="btn btn-filled" style="width:100%; margin-top:10px" onclick="submitRequest()">Submit Request</button>
-    </div>
-</div>
+        <div id="featureRequestSection" class="card" style="border: 2px solid var(--primary-container);">
+            <h3 style="margin-top:0">Request New Feature</h3>
+            <div id="requestList"></div>
+            
+            <div id="clientRequestForm" class="hidden">
+                <input type="text" id="req_name" placeholder="Feature Name" style="margin-bottom:8px">
+                <textarea id="req_desc" placeholder="Describe what you need..." rows="2"></textarea>
+                <button class="btn btn-filled" style="width:100%; margin-top:10px" onclick="submitRequest()">Submit Request</button>
+            </div>
+        </div>
 
         <div class="card" style="background: var(--primary-container); color: var(--on-primary-container);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -287,12 +364,23 @@
                 <button class="btn btn-filled" onclick="postComment()">Send</button>
             </div>
         </div>
+
+        <div style="text-align: right; margin-bottom: 10px;">
+                <button class="btn btn-tonal btn-sm no-print" onclick="window.print()">
+                    <span class="material-symbols-outlined">print</span>
+                    Save as PDF / Print
+                </button>
+        </div>
         
         <div id="shareSection" class="card" style="text-align:center;">
             <p style="font-size: 0.9rem; margin-bottom: 12px;">Share this link with your client:</p>
             <input type="text" id="clientLink" readonly style="background: #eee; text-align: center; font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
             <button class="btn btn-outline btn-sm" onclick="copyLink()">Copy Link</button>
         </div>
+
+        <div class="print-only" style="display:none; text-align:center; font-size:10px; margin-top:40px; opacity:0.5;">
+    Generated by Prism Portal • <span id="printDate"></span>
+</div>
     </div>
 </div>
 
@@ -379,6 +467,11 @@ function handleLogout() {
     auth.signOut().then(() => goHome());
 }
 
+function hideLoading() {
+    const loader = document.getElementById('loadingView');
+    if (loader) loader.classList.add('hidden');
+}
+
 function initData(id) {
     db.ref("projects").on("value", (snapshot) => {
         const data = snapshot.val();
@@ -386,11 +479,28 @@ function initData(id) {
         
         if (id) {
             currentProj = projects.find(p => p.id === id);
-            if (currentProj) loadTicketUI(); else goHome();
+            if (currentProj) {
+                loadTicketUI();
+            } else {
+                goHome();
+            }
         } else if (isAdmin) {
             renderDashboard();
+        } else {
+            // If we are at the root URL and not an admin, 
+            // the auth listener will handle showing login.
         }
+
+        // KEY: Hide loader once data is in!
+        setTimeout(hideLoading, 500); // 500ms delay for smooth transition
     });
+}
+
+function showLogin() {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.getElementById('ticketView').classList.add('hidden');
+    hideLoading(); // Hide spinner so user can see login fields
 }
 
     function goHome() { window.location.href = window.location.pathname; }
@@ -446,6 +556,10 @@ function initData(id) {
     function loadTicketUI() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('ticketView').classList.remove('hidden');
+
+// Add this inside loadTicketUI()
+document.getElementById('printDate').innerText = new Date().toLocaleDateString();
+
         updateTheme(currentProj.name);
 
         document.getElementById('t_name').value = currentProj.name;
