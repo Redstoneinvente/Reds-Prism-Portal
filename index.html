@@ -25,6 +25,20 @@
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+.badge-requested {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #c8e6c9;
+    animation: fadeIn 0.3s ease;
+}
+
         * { box-sizing: border-box; }
         body { 
             margin: 0; padding: 20px; background-color: var(--surface); color: #1c1b1f; 
@@ -594,6 +608,20 @@ document.getElementById('printDate').innerText = new Date().toLocaleDateString()
             shareSection.classList.add('hidden');
         }
 
+// Always show the TOTAL (Base + Active Addons) to the user
+    const finalPrice = currentProj.totalDisplayPrice || currentProj.price;
+    document.getElementById('t_price').value = finalPrice;
+
+    // Visual feedback: Green if addons are active
+    const priceInput = document.getElementById('t_price');
+    if (currentProj.totalDisplayPrice > currentProj.price) {
+        priceInput.style.color = "#2e7d32"; 
+        priceInput.style.fontWeight = "bold";
+    } else {
+        priceInput.style.color = "inherit";
+        priceInput.style.fontWeight = "700";
+    }
+
         // Show form to client if no pending request, otherwise show status
     document.getElementById('clientRequestForm').classList.toggle('hidden', isAdmin);
     renderRequests();
@@ -628,37 +656,71 @@ async function submitRequest() {
 
 async function devReviewRequest(reqId) {
     const req = currentProj.requests.find(r => r.id === reqId);
-    const price = parseFloat(await showModal("Quote Price", `Price for ${req.name}:`, true, "100")) || 0;
-    const days = parseInt(await showModal("Add Days", "Extra delivery days:", true, "2")) || 0;
-
-    req.price = price;
-    req.days = days;
-    req.status = 'pending_client'; // Waiting for Client to pay/accept
     
-    markDirty(`Dev quoted $${price} and ${days} days for ${req.name}`);
-    saveToFirebase();
+    // Use the Material You popup for price and days
+    const priceStr = await showModal("Quote Price", `How much for ${req.name}?`, true, "100");
+    if (priceStr === null) return; // User cancelled
+    
+    const daysStr = await showModal("Time Delay", "How many extra days?", true, "2");
+    if (daysStr === null) return; // User cancelled
+
+    req.price = parseFloat(priceStr) || 0;
+    req.days = parseInt(daysStr) || 0;
+    req.status = 'pending_client'; 
+    
+    markDirty(`Dev sent quote for ${req.name}: $${req.price}`);
+    saveToFirebase(); // This saves the request info, but saveToFirebase() won't add it to totalDisplayPrice yet!
 }
 
 function clientAcceptRequest(reqId) {
     const index = currentProj.requests.findIndex(r => r.id === reqId);
     const req = currentProj.requests[index];
 
-    // 1. Permanentally add to project
+    // Add to the Base Price
+    currentProj.price = (parseFloat(currentProj.price) || 0) + parseFloat(req.price);
+
+    // Update Date/Features...
     if(!currentProj.features) currentProj.features = [];
-    currentProj.features.push({name: req.name + " (Add-on)", done: false});
-
-    // 2. Update Price & Date
-    currentProj.price = (parseFloat(currentProj.price) || 0) + req.price;
+    currentProj.features.push({name: req.name, done: false});
     
-    let d = new Date(currentProj.end);
-    d.setDate(d.getDate() + req.days);
-    currentProj.end = d.toISOString().split('T')[0];
+    if (req.days > 0) {
+        let d = new Date(currentProj.end);
+        d.setDate(d.getDate() + parseInt(req.days));
+        currentProj.end = d.toISOString().split('T')[0];
+    }
 
-    // 3. Remove from requests
+    currentProj.requests.splice(index, 1);
+    markDirty(`Approved: ${req.name}`);
+    
+    saveToFirebase(); // This will recalculate totalDisplayPrice correctly
+}
+
+function clientAcceptRequest(reqId) {
+    const index = currentProj.requests.findIndex(r => r.id === reqId);
+    const req = currentProj.requests[index];
+
+    // 1. Convert the "Maybe" money into "Real" money
+    const currentBase = parseFloat(currentProj.price) || 0;
+    currentProj.price = currentBase + parseFloat(req.price);
+
+    // 2. Add to Features list
+    if(!currentProj.features) currentProj.features = [];
+    currentProj.features.push({name: req.name, done: false});
+
+    // 3. Update the deadline
+    if (req.days > 0) {
+        let d = new Date(currentProj.end);
+        d.setDate(d.getDate() + parseInt(req.days));
+        currentProj.end = d.toISOString().split('T')[0];
+    }
+
+    // 4. Remove the request from the "Negotiation Zone"
     currentProj.requests.splice(index, 1);
 
-    markDirty(`Client Approved & Added: ${req.name}`);
-    saveToFirebase();
+    markDirty(`Client Approved Feature: ${req.name} (+$${req.price})`);
+    
+    // This will now calculate the new total including the added price
+    saveToFirebase(); 
 }
 
 function renderRequests() {
@@ -686,30 +748,62 @@ function renderRequests() {
                 </div>
                 ${!isAdmin ? `
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept & Add to Project</button>
-                        <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})">Decline</button>
-                    </div>
+        <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept & Add</button>
+        <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})" style="color:red; border-color:red;">Decline</button>
+    </div>
                 ` : `<span style="font-size:0.8rem; opacity:0.5;">Waiting for client approval...</span>`}
             `}
         </div>
     `).join('');
 }
 
-    function saveToFirebase() {
-        if (!currentProj) return;
-        if (isAdmin) {
-            currentProj.name = document.getElementById('t_name').value;
-            currentProj.status = document.getElementById('t_status').value;
-            currentProj.end = document.getElementById('t_end').value;
-            currentProj.scope = document.getElementById('t_scope').value;
-            currentProj.price = parseFloat(document.getElementById('t_price').value) || 0;
-        }
-        let basePrice = parseFloat(currentProj.price) || 0;
-        let addonsTotal = (currentProj.speedups || []).filter(s => s.active).reduce((sum, s) => sum + s.price, 0);
-        currentProj.totalDisplayPrice = basePrice + addonsTotal;
+async function rejectRequest(reqId) {
+    const confirmed = await showModal("Decline Quote", "Delete this request and quote?");
+    if (!confirmed) return;
 
-        db.ref("projects/" + currentProj.id).update(currentProj);
+    const index = currentProj.requests.findIndex(r => r.id === reqId);
+    if (index > -1) {
+        const name = currentProj.requests[index].name;
+        currentProj.requests.splice(index, 1);
+        markDirty(`Client declined quote for: ${name}`);
+        saveToFirebase();
     }
+}
+
+   function saveToFirebase() {
+    if (!currentProj) return;
+    
+    if (isAdmin) {
+        currentProj.name = document.getElementById('t_name').value;
+        currentProj.status = document.getElementById('t_status').value;
+        currentProj.end = document.getElementById('t_end').value;
+        currentProj.scope = document.getElementById('t_scope').value;
+        
+        /* FIX: When you manually edit the price field as Admin, 
+           we save it as the NEW Base Price. 
+           We use totalDisplayPrice here to subtract addons 
+           so the Base Price stays "pure".
+        */
+        let inputVal = parseFloat(document.getElementById('t_price').value) || 0;
+        let addonsTotal = (currentProj.speedups || [])
+            .filter(s => s.active)
+            .reduce((sum, s) => sum + s.price, 0);
+            
+        // If the admin is editing, we assume they are editing the TOTAL. 
+        // We calculate the new base by subtracting active addons.
+        currentProj.price = inputVal - addonsTotal;
+    }
+
+    // Recalculate the Total for display
+    let basePrice = parseFloat(currentProj.price) || 0;
+    let currentAddons = (currentProj.speedups || [])
+        .filter(s => s.active)
+        .reduce((sum, s) => sum + s.price, 0);
+
+    currentProj.totalDisplayPrice = basePrice + currentAddons;
+
+    db.ref("projects/" + currentProj.id).update(currentProj);
+}
 
     function saveToDisk() { saveToFirebase(); alert("Synced to Cloud."); }
 
@@ -734,21 +828,34 @@ function renderRequests() {
     }
 
     function renderSpeedups() {
-        const list = document.getElementById('speedupList');
-        const items = currentProj.speedups || [];
-        list.innerHTML = items.map((s, i) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px;">
-                <div style="display:flex; flex-direction:column;">
+    const list = document.getElementById('speedupList');
+    const items = currentProj.speedups || [];
+    
+    list.innerHTML = items.map((s, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px; border: ${s.active && isAdmin ? '1px solid #4CAF50' : '1px solid transparent'};">
+            <div style="display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:0.9rem; font-weight:500;">${s.name} (+$${s.price})</span>
-                    ${s.days ? `<span style="font-size:0.7rem; opacity:0.7;">+${s.days} days to delivery</span>` : ''}
+                    ${isAdmin && s.active ? `
+                        <div class="badge-requested">
+                            <span class="material-symbols-outlined" style="font-size:14px;">check_circle</span>
+                            CLIENT REQUESTED
+                        </div>
+                    ` : ''}
                 </div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    ${isAdmin ? `<button onclick="removeAddon(${i})" style="background:none; border:none; color:red; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>` : ''}
-                    <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px;">
-                </div>
+                ${s.days ? `<span style="font-size:0.7rem; opacity:0.7;">+${s.days} days to delivery</span>` : ''}
             </div>
-        `).join('');
-    }
+            <div style="display:flex; align-items:center; gap:10px;">
+                ${isAdmin ? `
+                    <button onclick="removeAddon(${i})" style="background:none; border:none; color:red; cursor:pointer;" class="no-print">
+                        <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+                    </button>
+                ` : ''}
+                <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px; cursor:${isAdmin ? 'default' : 'pointer'};">
+            </div>
+        </div>
+    `).join('');
+}
 
     async function addAddonPrompt() {
     const name = await showModal("New Add-on", "What is the name of this service?", true);
