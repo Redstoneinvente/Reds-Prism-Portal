@@ -25,6 +25,21 @@
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Color coding for status labels */
+.status-pill {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.status-planning { background: #E1F5FE; color: #01579B; }
+.status-prototyping { background: #F3E5F5; color: #4A148C; }
+.status-active { background: #E8F5E9; color: #1B5E20; }
+.status-polish { background: #FFFDE7; color: #F57F17; }
+.status-testing { background: #FFEBEE; color: #B71C1C; }
+.status-hold { background: #ECEFF1; color: #263238; }
+
 .badge-requested {
     background: #e8f5e9;
     color: #2e7d32;
@@ -193,7 +208,22 @@
 
         #historyList { max-height: 300px; overflow-y: auto; padding-right: 8px; }
         .admin-only { border: 2px dashed var(--primary); background: rgba(255,255,255,0.6); }
-        .badge-admin { background: var(--primary); color: white; padding: 4px 12px; border-radius: 10px; font-size: 11px; letter-spacing: 1px; }
+        
+        .badge-admin { 
+    background: var(--primary); 
+    color: white; 
+    padding: 4px 10px; /* Reduced from 12px */
+    border-radius: 8px; /* Slightly less rounded for a tighter look */
+    font-size: 10px; /* Force a smaller, consistent size */
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content; /* Ensures it doesn't stretch to full width */
+}
+
         .hidden { display: none !important; }
     </style>
 </head>
@@ -303,10 +333,16 @@
             
             <div style="max-width: 200px; margin: 0 auto;">
                 <select id="t_status" disabled onchange="markDirty('Changed status')">
-                    <option value="Pending Approval">Pending Approval</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Review Phase">Review Phase</option>
-                    <option value="Completed">Completed</option>
+                    <option value="Planning">📝 Planning / Discovery</option>
+    <option value="Pre-Production">🏗️ Pre-Production</option>
+    <option value="Prototyping">🕹️ Prototyping</option>
+    <option value="In Progress">🚀 Active Development</option>
+    <option value="Polish">✨ Polish & UI</option>
+    <option value="Testing">🐞 QA / Testing</option>
+    <option value="Review">👀 Client Review</option>
+    <option value="Completed">✅ Awaiting Payment</option>
+    <option value="Completed">✅ Project Finished</option>
+    <option value="On Hold">⏸️ On Hold</option>
                 </select>
             </div>
         </header>
@@ -354,15 +390,23 @@
         </div>
 
         <div id="featureRequestSection" class="card" style="border: 2px solid var(--primary-container);">
-            <h3 style="margin-top:0">Request New Feature</h3>
-            <div id="requestList"></div>
-            
-            <div id="clientRequestForm" class="hidden">
-                <input type="text" id="req_name" placeholder="Feature Name" style="margin-bottom:8px">
-                <textarea id="req_desc" placeholder="Describe what you need..." rows="2"></textarea>
-                <button class="btn btn-filled" style="width:100%; margin-top:10px" onclick="submitRequest()">Submit Request</button>
-            </div>
-        </div>
+    <h3 style="margin-top:0">Feature Requests</h3>
+    
+    <div id="requestList"></div>
+    
+    <div id="clientRequestForm" class="hidden">
+        <input type="text" id="req_name" placeholder="Feature Name" style="margin-bottom:8px">
+        <textarea id="req_desc" placeholder="Describe what you need..." rows="2"></textarea>
+        <button class="btn btn-filled" style="width:100%; margin-top:10px" onclick="submitRequest()">Submit Request</button>
+    </div>
+
+    <div style="margin-top: 20px; border-top: 1px solid var(--outline); padding-top: 15px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('requestHistory').classList.toggle('hidden')">
+            <span class="material-symbols-outlined">history</span> View Request History
+        </button>
+        <div id="requestHistory" class="hidden" style="margin-top:15px;"></div>
+    </div>
+</div>
 
         <div class="card" style="background: var(--primary-container); color: var(--on-primary-container);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -673,101 +717,124 @@ async function devReviewRequest(reqId) {
 }
 
 function clientAcceptRequest(reqId) {
-    const index = currentProj.requests.findIndex(r => r.id === reqId);
-    const req = currentProj.requests[index];
+    const req = currentProj.requests.find(r => r.id === reqId);
 
-    // Add to the Base Price
+    // 1. Logic for Price/Date/Features
     currentProj.price = (parseFloat(currentProj.price) || 0) + parseFloat(req.price);
-
-    // Update Date/Features...
     if(!currentProj.features) currentProj.features = [];
-    currentProj.features.push({name: req.name, done: false});
-    
+    currentProj.features.push({name: req.name + " (Add-on)", done: false});
+
     if (req.days > 0) {
         let d = new Date(currentProj.end);
         d.setDate(d.getDate() + parseInt(req.days));
         currentProj.end = d.toISOString().split('T')[0];
     }
 
-    currentProj.requests.splice(index, 1);
+    // 2. NEW: Update Status instead of deleting
+    req.status = 'accepted';
+    req.decisionDate = new Date().toLocaleString();
+
     markDirty(`Approved: ${req.name}`);
-    
-    saveToFirebase(); // This will recalculate totalDisplayPrice correctly
-}
-
-function clientAcceptRequest(reqId) {
-    const index = currentProj.requests.findIndex(r => r.id === reqId);
-    const req = currentProj.requests[index];
-
-    // 1. Convert the "Maybe" money into "Real" money
-    const currentBase = parseFloat(currentProj.price) || 0;
-    currentProj.price = currentBase + parseFloat(req.price);
-
-    // 2. Add to Features list
-    if(!currentProj.features) currentProj.features = [];
-    currentProj.features.push({name: req.name, done: false});
-
-    // 3. Update the deadline
-    if (req.days > 0) {
-        let d = new Date(currentProj.end);
-        d.setDate(d.getDate() + parseInt(req.days));
-        currentProj.end = d.toISOString().split('T')[0];
-    }
-
-    // 4. Remove the request from the "Negotiation Zone"
-    currentProj.requests.splice(index, 1);
-
-    markDirty(`Client Approved Feature: ${req.name} (+$${req.price})`);
-    
-    // This will now calculate the new total including the added price
-    saveToFirebase(); 
-}
-
-function renderRequests() {
-    const list = document.getElementById('requestList');
-    const reqs = currentProj.requests || [];
-    
-    if(reqs.length === 0) {
-        list.innerHTML = `<p style="opacity:0.5; font-size:0.8rem;">No active requests.</p>`;
-        return;
-    }
-
-    list.innerHTML = reqs.map(r => `
-        <div style="background:white; padding:16px; border-radius:16px; margin-bottom:12px; border: 1px solid var(--outline);">
-            <div style="font-weight:700;">${r.name}</div>
-            <div style="font-size:0.85rem; opacity:0.7; margin-bottom:10px;">${r.desc}</div>
-            
-            ${r.status === 'pending_dev' ? `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="badge-admin" style="background:#666">WAITING FOR DEV QUOTE</span>
-                    ${isAdmin ? `<button class="btn btn-tonal btn-sm" onclick="devReviewRequest(${r.id})">Send Quote</button>` : ''}
-                </div>
-            ` : `
-                <div style="background:var(--primary-container); padding:10px; border-radius:8px; margin-bottom:10px;">
-                    <div style="font-weight:bold; color:var(--on-primary-container)">Quote: +$${r.price} & +${r.days} days</div>
-                </div>
-                ${!isAdmin ? `
-                    <div style="display:flex; gap:8px;">
-        <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept & Add</button>
-        <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})" style="color:red; border-color:red;">Decline</button>
-    </div>
-                ` : `<span style="font-size:0.8rem; opacity:0.5;">Waiting for client approval...</span>`}
-            `}
-        </div>
-    `).join('');
+    saveToFirebase();
 }
 
 async function rejectRequest(reqId) {
-    const confirmed = await showModal("Decline Quote", "Delete this request and quote?");
+    const confirmed = await showModal("Decline Quote", "Archive this request?");
     if (!confirmed) return;
 
-    const index = currentProj.requests.findIndex(r => r.id === reqId);
-    if (index > -1) {
-        const name = currentProj.requests[index].name;
-        currentProj.requests.splice(index, 1);
-        markDirty(`Client declined quote for: ${name}`);
-        saveToFirebase();
+    const req = currentProj.requests.find(r => r.id === reqId);
+    req.status = 'rejected';
+    req.decisionDate = new Date().toLocaleString();
+
+    markDirty(`Declined: ${req.name}`);
+    saveToFirebase();
+}
+
+function renderRequests() {
+    const activeList = document.getElementById('requestList');
+    const historyList = document.getElementById('requestHistory');
+    const allReqs = currentProj.requests || [];
+    
+    // 1. Filter into Active and History
+    const active = allReqs.filter(r => !r.status || r.status === 'pending_dev' || r.status === 'pending_client');
+    const history = allReqs.filter(r => r.status === 'accepted' || r.status === 'rejected');
+
+    // 2. Render Active Requests
+    if (active.length === 0) {
+        activeList.innerHTML = `<p style="opacity:0.5; font-size:0.8rem;">No active requests.</p>`;
+    } else {
+        activeList.innerHTML = active.map(r => {
+            // Check if it's waiting for your quote
+            const isWaitingForDev = !r.status || r.status === 'pending_dev';
+            
+            return `
+            <div style="background:white; padding:16px; border-radius:16px; margin-bottom:12px; border: 1px solid var(--outline);">
+                <div style="font-weight:700; margin-bottom:4px;">${r.name}</div>
+                <div style="font-size:0.85rem; opacity:0.7; margin-bottom:10px;">${r.desc}</div>
+                
+                ${isWaitingForDev ? `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="badge-admin" style="background:#5f6368; font-size:9px; padding:3px 8px;">WAITING FOR QUOTE</span>
+                        ${isAdmin ? `<button class="btn btn-tonal btn-sm" onclick="devReviewRequest(${r.id})" style="height:32px;">Send Quote</button>` : ''}
+                    </div>
+                ` : `
+                    <div style="background:var(--primary-container); padding:10px; border-radius:12px; margin-bottom:10px;">
+                        <div style="font-weight:bold; color:var(--on-primary-container); font-size:0.9rem;">
+                            Quote: +$${r.price} & +${r.days} days
+                        </div>
+                    </div>
+                    ${!isAdmin ? `
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept & Add</button>
+                            <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})" style="color:#d32f2f; border-color:#ffbaba;">Decline</button>
+                        </div>
+                    ` : `<span style="font-size:0.8rem; opacity:0.5; font-style:italic;">Sent to client...</span>`}
+                `}
+            </div>`;
+        }).join('');
     }
+
+    // 3. Render History (Fixed and Persistent)
+    if (history.length === 0) {
+        historyList.innerHTML = `<p style="opacity:0.4; font-size:0.75rem; text-align:center; padding:10px;">No archived requests found.</p>`;
+    } else {
+        historyList.innerHTML = history.map(r => `
+            <div style="padding:12px; border-radius:16px; background:rgba(255,255,255,0.5); margin-bottom:8px; border-left: 5px solid ${r.status === 'accepted' ? '#4CAF50' : '#F44336'};">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:600; font-size:0.85rem;">${r.name}</span>
+                    <span style="font-size:0.7rem; font-weight:bold; color:${r.status === 'accepted' ? '#2E7D32' : '#C62828'}">${r.status.toUpperCase()}</span>
+                </div>
+                <div style="font-size:0.75rem; opacity:0.6;">$${r.price} | +${r.days} Days</div>
+                <div style="font-size:0.65rem; opacity:0.4; margin-top:4px;">Date: ${r.decisionDate || 'Archived'}</div>
+            </div>
+        `).join('');
+    }
+}
+
+// Helper to keep code clean
+function renderSingleRequest(r) {
+    return `
+        <div style="background:white; padding:16px; border-radius:16px; margin-bottom:12px; border: 1px solid var(--outline);">
+            <div style="font-weight:700;">${r.name}</div>
+            <div style="font-size:0.85rem; opacity:0.7; margin-bottom:10px;">${r.desc}</div>
+            ${r.status === 'pending_dev' ? `
+                <div style="display:flex; justify-content:space-between;">
+                    <span class="badge-admin" style="background:#666">WAITING FOR QUOTE</span>
+                    ${isAdmin ? `<button class="btn btn-tonal btn-sm" onclick="devReviewRequest(${r.id})">Quote</button>` : ''}
+                </div>
+            ` : `
+                <div style="background:var(--primary-container); padding:10px; border-radius:8px; margin-bottom:10px;">
+                    <div style="font-weight:bold;">Quote: +$${r.price} & +${r.days} days</div>
+                </div>
+                ${!isAdmin ? `
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept</button>
+                        <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})" style="color:red; border-color:red;">Decline</button>
+                    </div>
+                ` : `<span style="font-size:0.8rem; opacity:0.5;">Waiting for client...</span>`}
+            `}
+        </div>
+    `;
 }
 
    function saveToFirebase() {

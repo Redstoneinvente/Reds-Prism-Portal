@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
     <style>
         :root {
             --hue: 250;
@@ -18,88 +22,162 @@
             --surface-variant: hsl(var(--hue), 20%, 94%);
             --outline: hsl(var(--hue), 10%, 80%);
             --shadow: rgba(var(--hue), 20%, 10%, 0.1);
-            
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+.badge-requested {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #c8e6c9;
+    animation: fadeIn 0.3s ease;
+}
+
         * { box-sizing: border-box; }
         body { 
-            margin: 0; 
-            padding: 20px; 
-            background-color: var(--surface); 
-            color: #1c1b1f; 
-            font-family: 'Google Sans', 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
+            margin: 0; padding: 20px; background-color: var(--surface); color: #1c1b1f; 
+            font-family: 'Google Sans', 'Roboto', sans-serif; display: flex; justify-content: center;
         }
+
+        @media print {
+    .print-only {
+        display: block !important;
+    }
+}
+
+@media print {
+    /* Hide all UI elements that shouldn't be on a static document */
+    .no-print, .btn, #adminHeader, #shareSection, #adminFeatureAdd, #adminAddonControl, .modal-overlay {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        padding: 0;
+    }
+
+    .container {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .card {
+        border: 1px solid #eee !important;
+        break-inside: avoid;
+        box-shadow: none !important;
+    }
+
+    /* Force background colors to show in PDF */
+    header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background-color: var(--primary-container) !important;
+    }
+
+    .progress-fill {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+        .spinner {
+    width: 48px;
+    height: 48px;
+    border: 5px solid var(--primary-container);
+    border-bottom-color: var(--primary);
+    border-radius: 50%;
+    display: inline-block;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Ensure views are hidden by default to prevent flickering */
+#dashboardView, #ticketView, #creatorView, #loginView {
+    display: none;
+}
+
+/* Show them only when the .hidden class is NOT present */
+#dashboardView:not(.hidden), 
+#ticketView:not(.hidden), 
+#creatorView:not(.hidden), 
+#loginView:not(.hidden) {
+    display: block;
+}
+
+        @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    height: 36px;
+}
+
+        .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-card {
+    background: var(--surface); width: 90%; max-width: 400px;
+    padding: 24px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         .container { width: 100%; max-width: 850px; animation: fadeIn 0.6s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- UI Components --- */
         .card { 
-            background: var(--surface-variant); 
-            border-radius: 28px; 
-            padding: 24px; 
-            margin-bottom: 16px; 
-            border: 1px solid transparent;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background: var(--surface-variant); border-radius: 28px; padding: 24px; margin-bottom: 16px; 
+            border: 1px solid transparent; transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .card:hover { box-shadow: 0 4px 12px var(--shadow); }
 
         header {
-            background: var(--primary-container);
-            color: var(--on-primary-container);
-            padding: 40px 24px;
-            border-radius: 32px;
-            text-align: center;
-            margin-bottom: 24px;
-            position: relative;
-            overflow: hidden;
+            background: var(--primary-container); color: var(--on-primary-container);
+            padding: 40px 24px; border-radius: 32px; text-align: center; margin-bottom: 24px;
+            position: relative; overflow: hidden;
         }
 
-        /* Material Inputs */
         .field-group { margin-bottom: 20px; }
         label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 8px; color: var(--primary); margin-left: 4px; }
         
         input, textarea, select {
-            width: 100%; 
-            padding: 16px; 
-            border-radius: 12px;
-            border: 1px solid var(--outline);
-            background: #ffffff;
-            font-size: 1rem;
-            transition: border 0.3s, background 0.3s;
+            width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--outline);
+            background: #ffffff; font-size: 1rem; transition: border 0.3s, background 0.3s;
         }
         input:focus { outline: none; border: 2px solid var(--primary); background: #fff; }
-        
         input:disabled, textarea:disabled, select:disabled {
             background: transparent; border: 1px solid transparent; padding-left: 4px; color: #1c1b1f; font-weight: 500; appearance: none;
         }
 
-        /* Buttons */
         .btn {
-            padding: 12px 24px;
-            border-radius: 100px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            font-family: 'Google Sans', sans-serif;
+            padding: 12px 24px; border-radius: 100px; border: none; cursor: pointer;
+            font-weight: 500; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.2s; font-family: 'Google Sans', sans-serif;
         }
         .btn-filled { background: var(--primary); color: var(--on-primary); }
         .btn-filled:hover { opacity: 0.9; transform: scale(1.02); box-shadow: 0 2px 8px var(--shadow); }
         .btn-tonal { background: var(--primary-container); color: var(--on-primary-container); }
         .btn-outline { background: transparent; border: 1px solid var(--outline); color: var(--primary); }
 
-        /* Progress Bar */
         .progress-track { background: rgba(0,0,0,0.08); height: 8px; border-radius: 10px; margin: 16px 0; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--primary); border-radius: 10px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* Checklist */
         .feature-item { 
             display: flex; align-items: center; gap: 12px; padding: 12px; 
             background: white; border-radius: 16px; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.03);
@@ -107,23 +185,70 @@
         .feature-item.done { opacity: 0.6; }
         .feature-item.done span { text-decoration: line-through; }
 
-        /* History */
         .history-entry { 
-            font-size: 0.8rem; padding: 8px 12px; border-left: 2px solid var(--primary); 
-            background: rgba(0,0,0,0.02); margin-bottom: 4px; border-radius: 0 8px 8px 0;
+            font-size: 0.8rem; padding: 10px 12px; border-left: 3px solid var(--primary); 
+            background: white; margin-bottom: 8px; border-radius: 4px 16px 16px 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
-        /* Admin Decor */
+        #historyList { max-height: 300px; overflow-y: auto; padding-right: 8px; }
         .admin-only { border: 2px dashed var(--primary); background: rgba(255,255,255,0.6); }
         .badge-admin { background: var(--primary); color: white; padding: 4px 12px; border-radius: 10px; font-size: 11px; letter-spacing: 1px; }
-
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
+<div id="loadingView" class="modal-overlay" style="background: var(--surface); z-index: 2000;">
+    <div style="text-align: center;">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px; font-weight: 500; color: var(--primary); letter-spacing: 1px;">SYNCING PRISM...</p>
+    </div>
+</div>
+
 <div class="container">
+    <div id="loginView" class="hidden">
+    <div class="card" style="max-width: 400px; margin: 100px auto; text-align: center;">
+        <h2>Admin Access</h2>
+        <div class="field-group">
+            <label>Email</label>
+            <input type="email" id="auth_email">
+        </div>
+        <div class="field-group">
+            <label>Password</label>
+            <input type="password" id="auth_pass">
+        </div>
+        <button class="btn btn-filled" style="width: 100%; justify-content: center;" onclick="handleLogin()">Login to Prism</button>
+        <p id="loginError" style="color: red; font-size: 0.8rem; margin-top: 10px;"></p>
+    </div>
+</div>
+
+<div id="adminHeader" class="hidden" style="background: white; border-radius: 20px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px var(--shadow); border: 1px solid var(--outline);">
     
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="btn btn-tonal btn-sm" onclick="goHome()" style="padding: 8px 16px;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">dashboard</span>
+            Dashboard
+        </button>
+        <div style="height: 24px; width: 1px; background: var(--outline); margin: 0 8px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite;"></div>
+            <span id="adminEmailDisplay" style="font-size: 0.85rem; font-weight: 500; opacity: 0.7;">Admin Mode</span>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <button class="btn btn-outline btn-sm" onclick="handleLogout()" style="border-color: #ffbaba; color: #d32f2f;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+            Sign Out
+        </button>
+        <button class="btn btn-filled btn-sm" onclick="saveToDisk()" style="box-shadow: 0 4px 10px rgba(var(--hue), 40%, 40%, 0.3);">
+            <span class="material-symbols-outlined" style="font-size: 18px;">cloud_upload</span>
+            Push Changes
+        </button>
+    </div>
+</div>
+
     <div id="dashboardView">
         <h1 style="font-size: 2.5rem; letter-spacing: -1px;">Prism <span style="font-weight: 400; opacity: 0.5;">Portal</span></h1>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
@@ -220,15 +345,32 @@
                     </div>
                 </div>
 
-                <div id="historySection" class="card hidden">
+                <div id="historySection" class="card">
                     <h3 style="margin-top:0">Audit Log</h3>
                     <div id="historyList"></div>
                 </div>
             </div>
+        
+        </div>
+
+        <div id="featureRequestSection" class="card" style="border: 2px solid var(--primary-container);">
+            <h3 style="margin-top:0">Request New Feature</h3>
+            <div id="requestList"></div>
+            
+            <div id="clientRequestForm" class="hidden">
+                <input type="text" id="req_name" placeholder="Feature Name" style="margin-bottom:8px">
+                <textarea id="req_desc" placeholder="Describe what you need..." rows="2"></textarea>
+                <button class="btn btn-filled" style="width:100%; margin-top:10px" onclick="submitRequest()">Submit Request</button>
+            </div>
         </div>
 
         <div class="card" style="background: var(--primary-container); color: var(--on-primary-container);">
-            <h3 style="margin-top:0">Client Collaboration</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin:0">Client Collaboration</h3>
+                <div id="adminAddonControl" class="hidden">
+                    <button class="btn btn-tonal btn-sm" onclick="addAddonPrompt()" style="background:white">+ Add New Option</button>
+                </div>
+            </div>
             <div id="speedupList" style="margin-bottom: 20px;"></div>
             <div id="commentsList" style="margin-bottom: 20px;"></div>
             <div style="display: flex; gap: 8px; background: white; padding: 8px; border-radius: 16px;">
@@ -236,34 +378,154 @@
                 <button class="btn btn-filled" onclick="postComment()">Send</button>
             </div>
         </div>
+
+        <div style="text-align: right; margin-bottom: 10px;">
+                <button class="btn btn-tonal btn-sm no-print" onclick="window.print()">
+                    <span class="material-symbols-outlined">print</span>
+                    Save as PDF / Print
+                </button>
+        </div>
         
         <div id="shareSection" class="card" style="text-align:center;">
             <p style="font-size: 0.9rem; margin-bottom: 12px;">Share this link with your client:</p>
             <input type="text" id="clientLink" readonly style="background: #eee; text-align: center; font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
             <button class="btn btn-outline btn-sm" onclick="copyLink()">Copy Link</button>
         </div>
+
+        <div class="print-only" style="display:none; text-align:center; font-size:10px; margin-top:40px; opacity:0.5;">
+    Generated by Prism Portal • <span id="printDate"></span>
+</div>
     </div>
 </div>
 
 <script>
-    let projects = JSON.parse(localStorage.getItem('prism_v3') || "[]");
+    const firebaseConfig = {
+        apiKey: "AIzaSyBYXOcbODnX935TjblP1dhc21uDaSJBzLs",
+        authDomain: "reds-prismportal.firebaseapp.com",
+        databaseURL: "https://reds-prismportal-default-rtdb.firebaseio.com",
+        projectId: "reds-prismportal",
+        storageBucket: "reds-prismportal.firebasestorage.app",
+        messagingSenderId: "404043779432",
+        appId: "1:404043779432:web:02e011e50aab507b6ddadd",
+        measurementId: "G-X026E8YW3T"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let projects = [];
     let currentProj = null;
     let isAdmin = false;
 
-    window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
-        isAdmin = urlParams.get('mode') === 'admin';
-        if (id) loadTicket(id); else renderDashboard();
-    };
+   // --- AUTH STATE ---
+const auth = firebase.auth();
+
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    const mode = urlParams.get('mode');
+
+    // Monitor Auth State
+    auth.onAuthStateChanged(user => {
+
+        if (user) {
+        isAdmin = true;
+        document.getElementById('loginView').classList.add('hidden');
+        
+        // Update the header display
+        const emailLabel = document.getElementById('adminEmailDisplay');
+        if(emailLabel) emailLabel.innerText = user.email.split('@')[0]; // Shows just the username part
+        
+        initData(id);
+    }
+    
+        if (user) {
+            // Logged in: Grant Admin privileges
+            isAdmin = true;
+            document.getElementById('loginView').classList.add('hidden');
+            initData(id);
+        } else {
+            // Not logged in
+            isAdmin = false;
+            if (mode === 'admin' || !id) {
+                // If trying to access admin mode or dashboard, show login
+                showLogin();
+            } else {
+                // Client view: Proceed without admin rights
+                initData(id);
+            }
+        }
+    });
+};
+
+function showLogin() {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.getElementById('ticketView').classList.add('hidden');
+}
+
+async function handleLogin() {
+    const email = document.getElementById('auth_email').value;
+    const pass = document.getElementById('auth_pass').value;
+    const errEl = document.getElementById('loginError');
+    
+    try {
+        await auth.signInWithEmailAndPassword(email, pass);
+        errEl.innerText = "";
+    } catch (error) {
+        errEl.innerText = "Access Denied: " + error.message;
+    }
+}
+
+function handleLogout() {
+    auth.signOut().then(() => goHome());
+}
+
+function hideLoading() {
+    const loader = document.getElementById('loadingView');
+    if (loader) loader.classList.add('hidden');
+}
+
+function initData(id) {
+    db.ref("projects").on("value", (snapshot) => {
+        const data = snapshot.val();
+        projects = data ? Object.values(data) : [];
+        
+        if (id) {
+            currentProj = projects.find(p => p.id === id);
+            if (currentProj) {
+                loadTicketUI();
+            } else {
+                goHome();
+            }
+        } else if (isAdmin) {
+            renderDashboard();
+        } else {
+            // If we are at the root URL and not an admin, 
+            // the auth listener will handle showing login.
+        }
+
+        // KEY: Hide loader once data is in!
+        setTimeout(hideLoading, 500); // 500ms delay for smooth transition
+    });
+}
+
+function showLogin() {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.getElementById('ticketView').classList.add('hidden');
+    hideLoading(); // Hide spinner so user can see login fields
+}
 
     function goHome() { window.location.href = window.location.pathname; }
 
     function renderDashboard() {
         document.getElementById('dashboardView').classList.remove('hidden');
+        document.getElementById('ticketView').classList.add('hidden');
+        document.getElementById('creatorView').classList.add('hidden');
         const list = document.getElementById('projectList');
         if(projects.length === 0) {
-            list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found. Create your first ticket to get started.</div>`;
+            list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found.</div>`;
             return;
         }
         list.innerHTML = projects.map(p => `
@@ -273,7 +535,7 @@
                     <div style="font-size:0.85rem; opacity:0.6;">${p.client} • ${p.status}</div>
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">Client View</button>
+                    <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">View</button>
                     <button class="btn btn-filled btn-sm" onclick="window.location.search='?id=${p.id}&mode=admin'">Manage</button>
                     <button class="btn btn-outline btn-sm" style="color:red" onclick="deleteProject('${p.id}')">Delete</button>
                 </div>
@@ -284,58 +546,85 @@
     function showCreator() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('creatorView').classList.remove('hidden');
-        document.getElementById('c_end').valueAsDate = new Date(Date.now() + 1.21e+9); // 14 days
+        document.getElementById('c_end').valueAsDate = new Date(Date.now() + 1.21e+9);
     }
 
     function createProject() {
         const name = document.getElementById('c_name').value;
         if(!name) return;
+        const newId = Math.random().toString(36).substr(2, 6).toUpperCase();
         const p = {
-            id: Math.random().toString(36).substr(2, 6).toUpperCase(),
-            name: name,
-            client: document.getElementById('c_client').value || "Guest",
-            price: document.getElementById('c_price').value,
+            id: newId, name: name, client: document.getElementById('c_client').value || "Guest",
+            price: parseFloat(document.getElementById('c_price').value),
             end: document.getElementById('c_end').value,
             start: new Date().toISOString().split('T')[0],
-            status: "Pending Approval",
-            scope: "Describe the deliverables here...",
-            features: [],
-            history: [{t: "Project Created", d: new Date().toLocaleString()}],
-            comments: [],
-            speedups: [{name: "Priority Support", price: 100, active: false}, {name: "Weekend Rush", price: 250, active: false}]
+            status: "Pending Approval", scope: "Describe deliverables...",
+            features: [], history: [{t: "Project Created", d: new Date().toLocaleString()}],
+            comments: [], speedups: []
         };
-        projects.push(p);
-        localStorage.setItem('prism_v3', JSON.stringify(projects));
-        window.location.search = `?id=${p.id}&mode=admin`;
+        db.ref("projects/" + newId).set(p).then(() => {
+            window.location.search = `?id=${p.id}&mode=admin`;
+        });
     }
 
-    function loadTicket(id) {
-        currentProj = projects.find(p => p.id === id);
-        if(!currentProj) return goHome();
-        
+    function loadTicketUI() {
         document.getElementById('dashboardView').classList.add('hidden');
         document.getElementById('ticketView').classList.remove('hidden');
+
+// Add this inside loadTicketUI()
+document.getElementById('printDate').innerText = new Date().toLocaleDateString();
+
         updateTheme(currentProj.name);
 
-        // Populate
         document.getElementById('t_name').value = currentProj.name;
         document.getElementById('t_id').innerText = `REFERENCE: ${currentProj.id}`;
         document.getElementById('t_status').value = currentProj.status;
         document.getElementById('t_end').value = currentProj.end;
         document.getElementById('t_scope').value = currentProj.scope;
-        document.getElementById('t_price').value = currentProj.price;
-        document.getElementById('clientLink').value = window.location.origin + window.location.pathname + "?id=" + currentProj.id;
+
+        const displayPrice = currentProj.totalDisplayPrice || currentProj.price;
+        document.getElementById('t_price').value = displayPrice;
+        document.getElementById('t_price').style.color = (currentProj.totalDisplayPrice > currentProj.price) ? "#2e7d32" : "inherit";
+
+        const shareUrl = new URL(window.location.href);
+        shareUrl.searchParams.set('id', currentProj.id);
+        shareUrl.searchParams.delete('mode'); 
+        document.getElementById('clientLink').value = shareUrl.href;
 
         if (isAdmin) {
             document.getElementById('adminHeader').classList.remove('hidden');
             document.getElementById('adminFeatureAdd').classList.remove('hidden');
-            document.getElementById('historySection').classList.remove('hidden');
+            document.getElementById('adminAddonControl').classList.remove('hidden');
             ['t_name', 't_status', 't_end', 't_scope', 't_price'].forEach(id => {
                 const el = document.getElementById(id);
-                el.disabled = false;
-                el.classList.add('admin-only');
+                el.disabled = false; el.classList.add('admin-only');
             });
         }
+
+        const shareSection = document.getElementById('shareSection');
+        if (isAdmin) {
+            shareSection.classList.remove('hidden');
+        } else {
+            shareSection.classList.add('hidden');
+        }
+
+// Always show the TOTAL (Base + Active Addons) to the user
+    const finalPrice = currentProj.totalDisplayPrice || currentProj.price;
+    document.getElementById('t_price').value = finalPrice;
+
+    // Visual feedback: Green if addons are active
+    const priceInput = document.getElementById('t_price');
+    if (currentProj.totalDisplayPrice > currentProj.price) {
+        priceInput.style.color = "#2e7d32"; 
+        priceInput.style.fontWeight = "bold";
+    } else {
+        priceInput.style.color = "inherit";
+        priceInput.style.fontWeight = "700";
+    }
+
+        // Show form to client if no pending request, otherwise show status
+    document.getElementById('clientRequestForm').classList.toggle('hidden', isAdmin);
+    renderRequests();
 
         renderFeatures();
         renderHistory();
@@ -344,81 +633,293 @@
         updateProgress();
     }
 
-    function saveToDisk() {
+async function submitRequest() {
+    const name = document.getElementById('req_name').value;
+    const desc = document.getElementById('req_desc').value;
+    if(!name || !desc) return;
+
+    if(!currentProj.requests) currentProj.requests = [];
+    currentProj.requests.push({
+        id: Date.now(),
+        name: name,
+        desc: desc,
+        status: 'pending_dev', // Waiting for Dev to price it
+        price: 0,
+        days: 0
+    });
+
+    markDirty(`Client requested feature: ${name}`);
+    saveToFirebase();
+    document.getElementById('req_name').value = "";
+    document.getElementById('req_desc').value = "";
+}
+
+async function devReviewRequest(reqId) {
+    const req = currentProj.requests.find(r => r.id === reqId);
+    
+    // Use the Material You popup for price and days
+    const priceStr = await showModal("Quote Price", `How much for ${req.name}?`, true, "100");
+    if (priceStr === null) return; // User cancelled
+    
+    const daysStr = await showModal("Time Delay", "How many extra days?", true, "2");
+    if (daysStr === null) return; // User cancelled
+
+    req.price = parseFloat(priceStr) || 0;
+    req.days = parseInt(daysStr) || 0;
+    req.status = 'pending_client'; 
+    
+    markDirty(`Dev sent quote for ${req.name}: $${req.price}`);
+    saveToFirebase(); // This saves the request info, but saveToFirebase() won't add it to totalDisplayPrice yet!
+}
+
+function clientAcceptRequest(reqId) {
+    const index = currentProj.requests.findIndex(r => r.id === reqId);
+    const req = currentProj.requests[index];
+
+    // Add to the Base Price
+    currentProj.price = (parseFloat(currentProj.price) || 0) + parseFloat(req.price);
+
+    // Update Date/Features...
+    if(!currentProj.features) currentProj.features = [];
+    currentProj.features.push({name: req.name, done: false});
+    
+    if (req.days > 0) {
+        let d = new Date(currentProj.end);
+        d.setDate(d.getDate() + parseInt(req.days));
+        currentProj.end = d.toISOString().split('T')[0];
+    }
+
+    currentProj.requests.splice(index, 1);
+    markDirty(`Approved: ${req.name}`);
+    
+    saveToFirebase(); // This will recalculate totalDisplayPrice correctly
+}
+
+function clientAcceptRequest(reqId) {
+    const index = currentProj.requests.findIndex(r => r.id === reqId);
+    const req = currentProj.requests[index];
+
+    // 1. Convert the "Maybe" money into "Real" money
+    const currentBase = parseFloat(currentProj.price) || 0;
+    currentProj.price = currentBase + parseFloat(req.price);
+
+    // 2. Add to Features list
+    if(!currentProj.features) currentProj.features = [];
+    currentProj.features.push({name: req.name, done: false});
+
+    // 3. Update the deadline
+    if (req.days > 0) {
+        let d = new Date(currentProj.end);
+        d.setDate(d.getDate() + parseInt(req.days));
+        currentProj.end = d.toISOString().split('T')[0];
+    }
+
+    // 4. Remove the request from the "Negotiation Zone"
+    currentProj.requests.splice(index, 1);
+
+    markDirty(`Client Approved Feature: ${req.name} (+$${req.price})`);
+    
+    // This will now calculate the new total including the added price
+    saveToFirebase(); 
+}
+
+function renderRequests() {
+    const list = document.getElementById('requestList');
+    const reqs = currentProj.requests || [];
+    
+    if(reqs.length === 0) {
+        list.innerHTML = `<p style="opacity:0.5; font-size:0.8rem;">No active requests.</p>`;
+        return;
+    }
+
+    list.innerHTML = reqs.map(r => `
+        <div style="background:white; padding:16px; border-radius:16px; margin-bottom:12px; border: 1px solid var(--outline);">
+            <div style="font-weight:700;">${r.name}</div>
+            <div style="font-size:0.85rem; opacity:0.7; margin-bottom:10px;">${r.desc}</div>
+            
+            ${r.status === 'pending_dev' ? `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="badge-admin" style="background:#666">WAITING FOR DEV QUOTE</span>
+                    ${isAdmin ? `<button class="btn btn-tonal btn-sm" onclick="devReviewRequest(${r.id})">Send Quote</button>` : ''}
+                </div>
+            ` : `
+                <div style="background:var(--primary-container); padding:10px; border-radius:8px; margin-bottom:10px;">
+                    <div style="font-weight:bold; color:var(--on-primary-container)">Quote: +$${r.price} & +${r.days} days</div>
+                </div>
+                ${!isAdmin ? `
+                    <div style="display:flex; gap:8px;">
+        <button class="btn btn-filled btn-sm" onclick="clientAcceptRequest(${r.id})">Accept & Add</button>
+        <button class="btn btn-outline btn-sm" onclick="rejectRequest(${r.id})" style="color:red; border-color:red;">Decline</button>
+    </div>
+                ` : `<span style="font-size:0.8rem; opacity:0.5;">Waiting for client approval...</span>`}
+            `}
+        </div>
+    `).join('');
+}
+
+async function rejectRequest(reqId) {
+    const confirmed = await showModal("Decline Quote", "Delete this request and quote?");
+    if (!confirmed) return;
+
+    const index = currentProj.requests.findIndex(r => r.id === reqId);
+    if (index > -1) {
+        const name = currentProj.requests[index].name;
+        currentProj.requests.splice(index, 1);
+        markDirty(`Client declined quote for: ${name}`);
+        saveToFirebase();
+    }
+}
+
+   function saveToFirebase() {
+    if (!currentProj) return;
+    
+    if (isAdmin) {
         currentProj.name = document.getElementById('t_name').value;
         currentProj.status = document.getElementById('t_status').value;
         currentProj.end = document.getElementById('t_end').value;
         currentProj.scope = document.getElementById('t_scope').value;
-        currentProj.price = document.getElementById('t_price').value;
-        const idx = projects.findIndex(p => p.id === currentProj.id);
-        projects[idx] = currentProj;
-        localStorage.setItem('prism_v3', JSON.stringify(projects));
-        alert("Success: Project database updated.");
+        
+        /* FIX: When you manually edit the price field as Admin, 
+           we save it as the NEW Base Price. 
+           We use totalDisplayPrice here to subtract addons 
+           so the Base Price stays "pure".
+        */
+        let inputVal = parseFloat(document.getElementById('t_price').value) || 0;
+        let addonsTotal = (currentProj.speedups || [])
+            .filter(s => s.active)
+            .reduce((sum, s) => sum + s.price, 0);
+            
+        // If the admin is editing, we assume they are editing the TOTAL. 
+        // We calculate the new base by subtracting active addons.
+        currentProj.price = inputVal - addonsTotal;
     }
 
-    function addFeaturePrompt() {
-        const f = prompt("Enter feature name:");
-        if(!f) return;
-        currentProj.features.push({name: f, done: false});
-        markDirty(`Added feature: ${f}`);
-        renderFeatures();
-    }
+    // Recalculate the Total for display
+    let basePrice = parseFloat(currentProj.price) || 0;
+    let currentAddons = (currentProj.speedups || [])
+        .filter(s => s.active)
+        .reduce((sum, s) => sum + s.price, 0);
+
+    currentProj.totalDisplayPrice = basePrice + currentAddons;
+
+    db.ref("projects/" + currentProj.id).update(currentProj);
+}
+
+    function saveToDisk() { saveToFirebase(); alert("Synced to Cloud."); }
+
+    async function addFeaturePrompt() {
+    const f = await showModal("Add Feature", "Enter the name of the new deliverable:", true);
+    
+    // If the user cancels or leaves it empty, do nothing
+    if(!f || f.trim() === "") return;
+
+    if(!currentProj.features) currentProj.features = [];
+    currentProj.features.push({name: f, done: false});
+    
+    markDirty(`Added feature: ${f}`);
+    saveToFirebase();
+}
 
     function toggleFeature(i) {
         if(!isAdmin) return;
         currentProj.features[i].done = !currentProj.features[i].done;
         markDirty(`Checked off ${currentProj.features[i].name}`);
-        renderFeatures();
+        saveToFirebase();
+    }
+
+    function renderSpeedups() {
+    const list = document.getElementById('speedupList');
+    const items = currentProj.speedups || [];
+    
+    list.innerHTML = items.map((s, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px; border: ${s.active && isAdmin ? '1px solid #4CAF50' : '1px solid transparent'};">
+            <div style="display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.9rem; font-weight:500;">${s.name} (+$${s.price})</span>
+                    ${isAdmin && s.active ? `
+                        <div class="badge-requested">
+                            <span class="material-symbols-outlined" style="font-size:14px;">check_circle</span>
+                            CLIENT REQUESTED
+                        </div>
+                    ` : ''}
+                </div>
+                ${s.days ? `<span style="font-size:0.7rem; opacity:0.7;">+${s.days} days to delivery</span>` : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                ${isAdmin ? `
+                    <button onclick="removeAddon(${i})" style="background:none; border:none; color:red; cursor:pointer;" class="no-print">
+                        <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+                    </button>
+                ` : ''}
+                <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px; cursor:${isAdmin ? 'default' : 'pointer'};">
+            </div>
+        </div>
+    `).join('');
+}
+
+    async function addAddonPrompt() {
+    const name = await showModal("New Add-on", "What is the name of this service?", true);
+    if (!name) return;
+    const price = parseFloat(await showModal("Price", "Enter price in USD:", true, "50")) || 0;
+    const days = parseInt(await showModal("Timeline", "Extra days added?", true, "0")) || 0;
+    
+    if (!currentProj.speedups) currentProj.speedups = [];
+    currentProj.speedups.push({ name, price, days, active: false });
+    markDirty(`Dev added option: ${name}`);
+    saveToFirebase();
+}
+
+    function removeAddon(i) {
+        if (!confirm("Remove?")) return;
+        currentProj.speedups.splice(i, 1);
+        saveToFirebase();
+    }
+
+    function toggleSpeed(i) {
+        const item = currentProj.speedups[i];
+        item.active = !item.active;
+        markDirty(`Client ${item.active ? 'requested' : 'removed'} ${item.name}`);
+        if (item.days > 0) {
+            let d = new Date(currentProj.end);
+            d.setDate(d.getDate() + (item.active ? item.days : -item.days));
+            currentProj.end = d.toISOString().split('T')[0];
+        }
+        saveToFirebase();
     }
 
     function postComment() {
         const el = document.getElementById('newComment');
         if(!el.value) return;
-        const msg = `<b>${isAdmin ? 'Developer' : 'Client'}:</b> ${el.value}`;
-        currentProj.comments.unshift(msg);
+        if(!currentProj.comments) currentProj.comments = [];
+        currentProj.comments.unshift(`<b>${isAdmin ? 'Developer' : 'Client'}:</b> ${el.value}`);
         el.value = "";
-        saveToDisk();
-        renderComments();
+        saveToFirebase();
     }
 
     function renderFeatures() {
         const list = document.getElementById('featureList');
-        if(currentProj.features.length === 0) list.innerHTML = `<p style="opacity:0.4; font-size:0.8rem;">No features listed yet.</p>`;
-        else list.innerHTML = currentProj.features.map((f, i) => `
-            <div class="feature-item ${f.done ? 'done' : ''}" onclick="toggleFeature(${i})" style="cursor:${isAdmin?'pointer':'default'}">
-                <span class="material-symbols-outlined" style="color:${f.done ? 'var(--primary)' : '#ccc'}">
-                    ${f.done ? 'check_circle' : 'radio_button_unchecked'}
-                </span>
-                <span>${f.name}</span>
-            </div>
-        `).join('');
+        const feats = currentProj.features || [];
+        list.innerHTML = feats.length === 0 ? `<p style="opacity:0.4; font-size:0.8rem;">No features.</p>` : 
+            feats.map((f, i) => `
+                <div class="feature-item ${f.done ? 'done' : ''}" onclick="toggleFeature(${i})" style="cursor:${isAdmin?'pointer':'default'}">
+                    <span class="material-symbols-outlined" style="color:${f.done ? 'var(--primary)' : '#ccc'}">
+                        ${f.done ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                    <span>${f.name}</span>
+                </div>
+            `).join('');
     }
 
     function renderHistory() {
-        document.getElementById('historyList').innerHTML = currentProj.history.map(h => 
+        document.getElementById('historyList').innerHTML = (currentProj.history || []).map(h => 
             `<div class="history-entry"><b>${h.t}</b><br><span style="opacity:0.5">${h.d}</span></div>`
         ).join('');
     }
 
     function renderComments() {
-        document.getElementById('commentsList').innerHTML = currentProj.comments.map(c => 
+        document.getElementById('commentsList').innerHTML = (currentProj.comments || []).map(c => 
             `<div style="background:rgba(255,255,255,0.7); padding:12px; border-radius:12px; margin-bottom:8px; font-size:0.9rem;">${c}</div>`
         ).join('');
-    }
-
-    function renderSpeedups() {
-        document.getElementById('speedupList').innerHTML = currentProj.speedups.map((s, i) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.3); padding:10px 16px; border-radius:12px; margin-bottom:6px;">
-                <span style="font-size:0.9rem;">${s.name} (+$${s.price})</span>
-                <input type="checkbox" ${s.active ? 'checked' : ''} ${isAdmin ? 'disabled' : ''} onchange="toggleSpeed(${i})" style="width:20px; height:20px;">
-            </div>
-        `).join('');
-    }
-
-    function toggleSpeed(i) {
-        currentProj.speedups[i].active = !currentProj.speedups[i].active;
-        if(currentProj.speedups[i].active) markDirty(`Client requested ${currentProj.speedups[i].name}`);
-        saveToDisk();
     }
 
     function updateProgress() {
@@ -435,28 +936,65 @@
         return Math.abs(hash % 360);
     }
 
-    function updateTheme(str) { 
-        document.documentElement.style.setProperty('--hue', getHue(str)); 
-    }
+    function updateTheme(str) { document.documentElement.style.setProperty('--hue', getHue(str)); }
 
     function markDirty(msg) {
+        if(!currentProj.history) currentProj.history = [];
         currentProj.history.unshift({t: msg, d: new Date().toLocaleString()});
-        renderHistory();
     }
 
     function copyLink() {
-        const copyText = document.getElementById("clientLink");
-        copyText.select();
-        document.execCommand("copy");
-        alert("Link copied to clipboard!");
+        const el = document.getElementById("clientLink");
+        el.select(); document.execCommand("copy"); alert("Link copied!");
     }
 
-    function deleteProject(id) {
-        if(!confirm("Are you sure? This cannot be undone.")) return;
-        projects = projects.filter(p => p.id !== id);
-        localStorage.setItem('prism_v3', JSON.stringify(projects));
-        renderDashboard();
-    }
+    async function deleteProject(id) {
+    const confirmed = await showModal("Delete Project", "Are you sure? This cannot be undone.");
+    if(confirmed) db.ref("projects/" + id).remove();
+}
+
+    async function showModal(title, body, hasInput = false, defaultValue = "") {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('customModal');
+        const inputContainer = document.getElementById('modalInputContainer');
+        const input = document.getElementById('modalInput');
+        
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalBody').innerText = body;
+        modal.classList.remove('hidden');
+        
+        if (hasInput) {
+            inputContainer.classList.remove('hidden');
+            input.value = defaultValue;
+            input.focus();
+        } else {
+            inputContainer.classList.add('hidden');
+        }
+
+        document.getElementById('modalConfirm').onclick = () => {
+            modal.classList.add('hidden');
+            resolve(hasInput ? input.value : true);
+        };
+        document.getElementById('modalCancel').onclick = () => {
+            modal.classList.add('hidden');
+            resolve(null);
+        };
+    });
+}
 </script>
+
+<div id="customModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h3 id="modalTitle">Title</h3>
+        <p id="modalBody" style="opacity: 0.7; font-size: 0.9rem; margin-bottom: 20px;"></p>
+        <div id="modalInputContainer" class="hidden">
+            <input type="text" id="modalInput" style="margin-bottom: 15px;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button class="btn btn-outline" id="modalCancel">Cancel</button>
+            <button class="btn btn-filled" id="modalConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
