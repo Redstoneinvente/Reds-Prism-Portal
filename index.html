@@ -1150,7 +1150,7 @@ renderAIAnalysis();
                         </div>
                     ` : ''}
                 </div>
-                ${s.days ? `<span style="font-size:0.7rem; opacity:0.7;">+${s.days} days to delivery</span>` : ''}
+${s.days ? `<span style="font-size:0.7rem; opacity:0.7;">${s.days > 0 ? '+' : ''}${s.days} days to delivery</span>` : ''}
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 ${isAdmin ? `
@@ -1186,11 +1186,16 @@ renderAIAnalysis();
         const item = currentProj.speedups[i];
         item.active = !item.active;
         markDirty(`Client ${item.active ? 'requested' : 'removed'} ${item.name}`);
-        if (item.days > 0) {
-            let d = new Date(currentProj.end);
-            d.setDate(d.getDate() + (item.active ? item.days : -item.days));
+        let d = new Date(currentProj.end);
+            
+            if (item.days < 0){
+                d.setDate(d.getDate() - (item.active ? Math.abs(item.days) : -Math.abs(item.days)));
+            }
+            else{
+                d.setDate(d.getDate() + (item.active ? item.days : -item.days));
+            }
+
             currentProj.end = d.toISOString().split('T')[0];
-        }
         saveToFirebase();
     }
 
