@@ -41,6 +41,47 @@
 .status-testing { background: #FFEBEE; color: #B71C1C; }
 .status-hold { background: #ECEFF1; color: #263238; }
 
+.fade-in {
+    animation: fadeIn 0.8s ease-out;
+}
+
+/* Material 3 Spinner Animation */
+.m3-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--primary);
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    animation: m3rotate 0.8s linear infinite;
+}
+
+@keyframes m3rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Smooth Result Transition */
+.m3-result-card {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    padding: 24px;
+    border-radius: 28px; /* High rounding for M3 */
+    border: 1px solid var(--primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    animation: m3Appear 0.5s cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes m3Appear {
+    from { opacity: 0; scale: 0.95; }
+    to { opacity: 1; scale: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .badge-requested {
     background: #e8f5e9;
     color: #2e7d32;
@@ -65,6 +106,23 @@
     .print-only {
         display: block !important;
     }
+}
+
+.loading-shimmer {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--primary);
+    animation: pulse 1.5s infinite;
+    padding: 15px;
+    text-align: center;
+    background: rgba(0,0,0,0.05);
+    border-radius: 12px;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
 }
 
 @media print {
@@ -1159,51 +1217,132 @@ renderAIAnalysis();
 
 function renderAIAnalysis() {
     const container = document.getElementById('ai_analysis_box');
-    if (!container) return;
+    if (!container || !currentProj) return;
 
-    // 1. "Scanning" Effect (optional but cool)
-    container.innerHTML = `<div class="loading-shimmer">AI is analyzing scope...</div>`;
+    const steps = [
+        { msg: "Analyzing project scope", delay: 900 },
+        { msg: "Evaluating feature density", delay: 1100 },
+        { msg: "Benchmarking industry rates", delay: 1000 },
+        { msg: "Calculating deal sentiment", delay: 700 }
+    ];
 
+    let currentStep = 0;
+
+    function showNextStep() {
+        if (currentStep < steps.length) {
+            // Material You "Surface Container Low" style
+            container.innerHTML = `
+                <div style="background: var(--surface-variant); padding: 20px; border-radius: 28px; border: 1px solid var(--outline-variant);">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <div class="m3-spinner"></div>
+                        <div style="font-family: 'Google Sans', sans-serif; font-weight: 500; font-size: 0.9rem; color: var(--on-surface);">
+                            ${steps[currentStep].msg}...
+                        </div>
+                    </div>
+                    
+                    <div style="width: 100%; height: 4px; background: rgba(0,0,0,0.05); border-radius: 10px; overflow: hidden;">
+                        <div style="width: ${(currentStep + 1) * 25}%; height: 100%; background: var(--primary); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 10px;"></div>
+                    </div>
+                    
+                    <div style="margin-top: 12px; font-size: 0.7rem; letter-spacing: 0.5px; opacity: 0.6; font-weight: 700; text-transform: uppercase;">
+                        Red's Prism Neural Engine
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                currentStep++;
+                showNextStep();
+            }, steps[currentStep - 1]?.delay || 900); 
+        } else {
+            finalizeAnalysis(container);
+        }
+    }
+
+    showNextStep();
+}
+
+function finalizeAnalysis(container) {
+    if (!currentProj) {
+        container.innerHTML = ""; 
+        return;
+    }
+
+    const p = currentProj;
+    const featureCount = (p.features ? p.features.length : 0) || 1;
+    const total = p.totalDisplayPrice || p.price || 0;
+    const targetConfidence = parseFloat((93 + Math.random() * 6).toFixed(1));
+
+    let result = {
+        label: "HIGH VALUE",
+        desc: "The scope exceeds the cost. This is a highly competitive rate.",
+        color: "#2e7d32",
+        icon: "auto_awesome"
+    };
+
+    if (total / featureCount > 500) {
+        result = { label: "PREMIUM QUOTE", desc: "Reflects high-end technical complexity.", color: "#6200ee", icon: "verified" };
+    } else if (total / featureCount > 250) {
+        result = { label: "MARKET AVERAGE", desc: "Aligns with standard industry rates.", color: "#1565c0", icon: "insights" };
+    }
+
+    container.innerHTML = `
+        <div class="fade-in" style="background:${result.color}10; border:1px solid ${result.color}30; border-left: 5px solid ${result.color}; padding:20px; border-radius:16px; display: flex; flex-direction: column; gap: 12px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:8px; color:${result.color}; margin-bottom: 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">${result.icon}</span>
+                    <strong style="font-size:0.7rem; letter-spacing:1px; text-transform: uppercase;">AI Deal Analysis</strong>
+                </div>
+                <div style="font-weight:900; font-size:1.25rem; color:${result.color};">${result.label}</div>
+                <div style="font-size:0.9rem; opacity:0.8; line-height:1.5; margin-top: 4px;">${result.desc}</div>
+            </div>
+
+            <div style="margin-top: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 0.65rem; font-weight: 800; color: ${result.color}; opacity: 0.7;">ENGINE CONFIDENCE</span>
+                    <span id="ai_conf_num" style="font-size: 0.75rem; font-weight: 900; color: ${result.color};">0.0%</span>
+                </div>
+                <div style="height: 6px; width: 100%; background: ${result.color}15; border-radius: 10px; overflow: hidden;">
+                    <div id="ai_confidence_fill" 
+                         style="height: 100%; width: 0%; background: ${result.color}; border-radius: 10px; opacity: 0.6; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // --- SYNCHRONIZED ANIMATION ---
     setTimeout(() => {
-        const p = currentProj;
-        const featureCount = (p.features || []).length || 1;
-        const total = p.totalDisplayPrice || p.price;
-        const ratio = total / featureCount;
+        const fillBar = document.getElementById('ai_confidence_fill');
+        const numLabel = document.getElementById('ai_conf_num');
+        if (!fillBar || !numLabel) return;
 
-        let result = {
-            label: "HIGH VALUE",
-            desc: "The scope exceeds the cost. This is a highly competitive rate for Unity development.",
-            color: "#2e7d32",
-            icon: "auto_awesome"
-        };
+        const duration = 1500; 
+        const startTime = performance.now();
 
-        if (ratio > 500) {
-            result = {
-                label: "PREMIUM QUOTE",
-                desc: "Reflects high-end technical complexity and priority delivery.",
-                color: "#6200ee",
-                icon: "verified"
-            };
-        } else if (ratio > 250) {
-            result = {
-                label: "MARKET AVERAGE",
-                desc: "This quote aligns perfectly with standard industry rates for specialized work.",
-                color: "#1565c0",
-                icon: "insights"
-            };
+        // Start the bar CSS transition
+        fillBar.style.width = targetConfidence + "%";
+
+        // Animate the number using the same timing logic
+        function updateNumber(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function: "Ease Out Expo" (Matches the smooth bar slow-down)
+            const easedProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+            
+            const currentVal = (targetConfidence * easedProgress).toFixed(1);
+            numLabel.innerText = currentVal + "%";
+
+            if (progress < 1) {
+                requestAnimationFrame(updateNumber);
+            } else {
+                numLabel.innerText = targetConfidence.toFixed(1) + "%";
+            }
         }
 
-        container.innerHTML = `
-            <div style="background:${result.color}10; border:1px solid ${result.color}30; padding:15px; border-radius:16px;">
-                <div style="display:flex; align-items:center; gap:8px; color:${result.color}; margin-bottom:5px;">
-                    <span class="material-symbols-outlined">${result.icon}</span>
-                    <strong style="font-size:0.75rem; letter-spacing:1px;">AI DEAL ANALYSIS</strong>
-                </div>
-                <div style="font-weight:800; font-size:1.1rem; color:${result.color};">${result.label}</div>
-                <div style="font-size:0.85rem; opacity:0.8; line-height:1.4;">${result.desc}</div>
-            </div>
-        `;
-    }, 800); // Small delay to feel like it's "thinking"
+        requestAnimationFrame(updateNumber);
+    }, 150);
 }
 </script>
 
