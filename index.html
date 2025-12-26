@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -288,12 +289,20 @@
             </button>
         </div>
         
-        <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
             <div style="position: relative; display: flex; align-items: center;">
                 <span class="material-symbols-outlined" style="position: absolute; left: 12px; opacity: 0.5;">search</span>
-                <input type="text" id="dashboardSearch" placeholder="Search projects, clients, or status..." 
-                    oninput="renderDashboard()" 
+                <input type="text" id="dashboardSearch" placeholder="Search..." oninput="renderDashboard()" 
                     style="padding-left: 40px; height: 48px; border-radius: 24px; border: 1px solid var(--outline); background: var(--surface-variant); width: 100%;">
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button id="btnListView" class="btn btn-filled btn-sm" onclick="setDashboardView('list')">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">format_list_bulleted</span> List View
+                </button>
+                <button id="btnGroupView" class="btn btn-tonal btn-sm" onclick="setDashboardView('client')">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">group</span> Group by Client
+                </button>
             </div>
         </div>
 
@@ -574,44 +583,75 @@ function showLogin() {
 
     function goHome() { window.location.href = window.location.pathname; }
 
-    function renderDashboard() {
-        const list = document.getElementById('projectList');
-        const searchInput = document.getElementById('dashboardSearch');
-        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+function renderDashboard() {
+    const list = document.getElementById('projectList');
+    if (!list) return;
 
-        if (!list) return;
+    const searchTerm = document.getElementById('dashboardSearch')?.value.toLowerCase() || "";
 
-        // Filter projects based on search term
-        const filteredProjects = projects.filter(p => {
-            return (
-                p.name.toLowerCase().includes(searchTerm) ||
-                (p.client && p.client.toLowerCase().includes(searchTerm)) ||
-                (p.status && p.status.toLowerCase().includes(searchTerm))
-            );
-        });
+    // 1. Filter projects first
+    const filtered = projects.filter(p => 
+        p.name.toLowerCase().includes(searchTerm) || 
+        (p.client && p.client.toLowerCase().includes(searchTerm)) ||
+        (p.status && p.status.toLowerCase().includes(searchTerm))
+    );
 
-        if (filteredProjects.length === 0) {
-            list.innerHTML = `<div style="text-align:center; opacity:0.5; margin-top:40px;">No projects found matching "${searchTerm}"</div>`;
-            return;
-        }
+    if (currentDashboardView === 'list') {
+        renderListView(filtered, list);
+    } else {
+        renderGroupedView(filtered, list);
+    }
+}
 
-        list.innerHTML = filteredProjects.map(p => `
-            <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <div>
-                    <div style="font-weight:700; font-size:1.2rem; color:hsl(${getHue(p.name)}, 50%, 30%)">${p.name}</div>
-                    <div style="font-size:0.85rem; opacity:0.6; display:flex; align-items:center; gap:8px; margin-top:4px;">
-                        ${p.client || 'No Client'} • 
-                        <span class="status-pill ${getStatusClass(p.status)}">${p.status || 'Active'}</span>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">View</button>
-                    <button class="btn btn-filled btn-sm" onclick="window.location.search='?id=${p.id}&mode=admin'">Manage</button>
-                    <button class="btn btn-outline btn-sm" style="color:red" onclick="deleteProject('${p.id}')">Delete</button>
+// Standard List View
+function renderListView(items, container) {
+    container.innerHTML = items.map(p => renderProjectCard(p)).join('');
+}
+
+// Client Grouped View
+function renderGroupedView(items, container) {
+    // Group projects by client name
+    const groups = items.reduce((acc, p) => {
+        const clientName = p.client || "Unassigned Clients";
+        if (!acc[clientName]) acc[clientName] = [];
+        acc[clientName].push(p);
+        return acc;
+    }, {});
+
+    container.innerHTML = Object.keys(groups).sort().map(client => `
+        <div style="margin-bottom: 24px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; opacity:0.7;">
+                <span class="material-symbols-outlined">person</span>
+                <h3 style="margin:0; font-size:1rem; text-transform:uppercase; letter-spacing:1px;">${client}</h3>
+                <div style="flex-grow:1; height:1px; background:var(--outline-variant);"></div>
+                <span style="font-size:0.8rem;">${groups[client].length} Project(s)</span>
+            </div>
+            ${groups[client].map(p => renderProjectCard(p)).join('')}
+        </div>
+    `).join('');
+}
+
+// Shared Component to keep code clean
+function renderProjectCard(p) {
+    return `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border:1px solid var(--outline-variant);">
+            <div>
+                <div style="font-weight:700; font-size:1.1rem; color:hsl(${getHue(p.name)}, 50%, 30%)">${p.name}</div>
+                <div style="font-size:0.85rem; opacity:0.6; display:flex; align-items:center; gap:8px; margin-top:4px;">
+                    ${p.client || 'No Client'} • 
+                    <span class="status-pill ${getStatusClass(p.status)}">${p.status || 'Active'}</span>
                 </div>
             </div>
-        `).join('');
-    }
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">View</button>
+                <button class="btn btn-filled btn-sm" onclick="window.location.search='?id=${p.id}&mode=admin'">Manage</button>
+                <button class="btn btn-outline btn-sm" style="color:#d32f2f; border-color:#ffbaba;" onclick="deleteProject('${p.id}')">
+                    <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+                </button>
+            </div>
+        </div>
+    `;
+}
 
     function getStatusClass(status) {
     if (!status) return 'status-active';
@@ -637,6 +677,18 @@ function showLogin() {
         document.getElementById('creatorView').classList.remove('hidden');
         document.getElementById('c_end').valueAsDate = new Date(Date.now() + 1.21e+9);
     }
+
+let currentDashboardView = 'list'; // 'list' or 'client'
+
+function setDashboardView(view) {
+    currentDashboardView = view;
+    
+    // Update button styles
+    document.getElementById('btnListView').className = view === 'list' ? 'btn btn-filled btn-sm' : 'btn btn-tonal btn-sm';
+    document.getElementById('btnGroupView').className = view === 'client' ? 'btn btn-filled btn-sm' : 'btn btn-tonal btn-sm';
+    
+    renderDashboard();
+}
 
     function createProject() {
         const name = document.getElementById('c_name').value;
