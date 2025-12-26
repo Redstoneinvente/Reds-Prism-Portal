@@ -287,7 +287,18 @@
                 <span class="material-symbols-outlined">add</span> Create Ticket
             </button>
         </div>
+        
+        <div style="margin-bottom: 20px;">
+            <div style="position: relative; display: flex; align-items: center;">
+                <span class="material-symbols-outlined" style="position: absolute; left: 12px; opacity: 0.5;">search</span>
+                <input type="text" id="dashboardSearch" placeholder="Search projects, clients, or status..." 
+                    oninput="renderDashboard()" 
+                    style="padding-left: 40px; height: 48px; border-radius: 24px; border: 1px solid var(--outline); background: var(--surface-variant); width: 100%;">
+            </div>
+        </div>
+
         <div id="projectList"></div>
+
     </div>
 
     <div id="creatorView" class="hidden">
@@ -564,19 +575,34 @@ function showLogin() {
     function goHome() { window.location.href = window.location.pathname; }
 
     function renderDashboard() {
-        document.getElementById('dashboardView').classList.remove('hidden');
-        document.getElementById('ticketView').classList.add('hidden');
-        document.getElementById('creatorView').classList.add('hidden');
         const list = document.getElementById('projectList');
-        if(projects.length === 0) {
-            list.innerHTML = `<div class="card" style="text-align:center; opacity:0.5; padding: 60px;">No projects found.</div>`;
+        const searchInput = document.getElementById('dashboardSearch');
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+
+        if (!list) return;
+
+        // Filter projects based on search term
+        const filteredProjects = projects.filter(p => {
+            return (
+                p.name.toLowerCase().includes(searchTerm) ||
+                (p.client && p.client.toLowerCase().includes(searchTerm)) ||
+                (p.status && p.status.toLowerCase().includes(searchTerm))
+            );
+        });
+
+        if (filteredProjects.length === 0) {
+            list.innerHTML = `<div style="text-align:center; opacity:0.5; margin-top:40px;">No projects found matching "${searchTerm}"</div>`;
             return;
         }
-        list.innerHTML = projects.map(p => `
-            <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+
+        list.innerHTML = filteredProjects.map(p => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <div>
                     <div style="font-weight:700; font-size:1.2rem; color:hsl(${getHue(p.name)}, 50%, 30%)">${p.name}</div>
-                    <div style="font-size:0.85rem; opacity:0.6;">${p.client} • ${p.status}</div>
+                    <div style="font-size:0.85rem; opacity:0.6; display:flex; align-items:center; gap:8px; margin-top:4px;">
+                        ${p.client || 'No Client'} • 
+                        <span class="status-pill ${getStatusClass(p.status)}">${p.status || 'Active'}</span>
+                    </div>
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button class="btn btn-tonal btn-sm" onclick="window.location.search='?id=${p.id}'">View</button>
@@ -586,6 +612,25 @@ function showLogin() {
             </div>
         `).join('');
     }
+
+    function getStatusClass(status) {
+    if (!status) return 'status-active';
+    
+    // Convert to lowercase to make the check case-insensitive
+    const s = status.toLowerCase();
+    
+    if (s.includes('planning')) return 'status-planning';
+    if (s.includes('pre-production')) return 'status-planning';
+    if (s.includes('prototype')) return 'status-prototyping';
+    if (s.includes('progress')) return 'status-active';
+    if (s.includes('polish')) return 'status-polish';
+    if (s.includes('testing')) return 'status-testing';
+    if (s.includes('review')) return 'status-hold';
+    if (s.includes('completed')) return 'status-active';
+    if (s.includes('hold')) return 'status-hold';
+    
+    return 'status-active'; // Default fallback
+}
 
     function showCreator() {
         document.getElementById('dashboardView').classList.add('hidden');
