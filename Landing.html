@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prism Portal | Redstoneinvente Game Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .m3-surface { background-color: #fcf8f8; }
+        .m3-card { background-color: #ffffff; border-radius: 28px; transition: cubic-bezier(0.4, 0, 0.2, 1) 0.3s; }
+        .m3-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -15px rgba(186, 26, 26, 0.1); }
+        .brand-primary { background-color: #ba1a1a; color: #ffffff; }
+        .brand-secondary { background-color: #ffdad6; color: #410002; }
+        .brand-dark { background-color: #201a1a; color: #ffffff; }
+        .gradient-text { background: linear-gradient(135deg, #ba1a1a 0%, #201a1a 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="m3-surface text-slate-900">
+
+    <nav class="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
+        <div class="flex items-center gap-4">
+            <img src="Resources/Images/Logo" alt="Redstoneinvente" class="h-10 w-auto object-contain" onerror="this.style.display='none'">
+            <div class="text-2xl font-bold tracking-tight text-slate-900">Prism<span class="text-red-600">Portal</span></div>
+        </div>
+        <div class="hidden md:flex items-center gap-8 font-medium text-slate-600">
+            <a href="#features" class="hover:text-red-600 transition">How it Works</a>
+            <a href="#pricing" class="hover:text-red-600 transition">Pricing</a>
+            <button class="brand-dark px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-red-700 transition">Login</button>
+        </div>
+    </nav>
+
+    <header class="px-6 pt-16 pb-24 max-w-7xl mx-auto text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full brand-secondary text-xs font-bold tracking-widest uppercase mb-8">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+            </span>
+            By Redstoneinvente Game Studio
+        </div>
+        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-8">
+            Turn your quotes into <br>
+            <span class="gradient-text">Project Command Centers.</span>
+        </h1>
+        <p class="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-12">
+            <strong>Prism Portal</strong> is the bridge between service providers and clients. Use real-time sync and AI-backed logic to build trust and justify your rates.
+        </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <a href="#pricing" class="brand-primary px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:scale-105 transition transform">Get Started — $7/mo</a>
+            <button class="bg-white border border-slate-200 px-10 py-4 rounded-full text-lg font-bold hover:bg-slate-50 transition">Watch Feature Walkthrough</button>
+        </div>
+    </header>
+
+    <section id="features" class="px-6 py-24 bg-white rounded-[60px]">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Authority in every invoice.</h2>
+                <p class="text-slate-500">Prism Portal transforms a standard ticket into a dynamic project experience.</p>
+            </div>
+            
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="p-8 rounded-[40px] bg-stone-50 border border-stone-100">
+                    <div class="text-3xl mb-4">🧠</div>
+                    <h3 class="text-xl font-bold mb-3">AI Deal Analysis</h3>
+                    <p class="text-slate-600 leading-relaxed">Our heuristic engine analyzes project density to verify quote "Fairness." Justify your value with real-time confidence scoring.</p>
+                </div>
+                <div class="p-8 rounded-[40px] bg-stone-50 border border-stone-100">
+                    <div class="text-3xl mb-4">🔄</div>
+                    <h3 class="text-xl font-bold mb-3">Dual-Sided Interface</h3>
+                    <p class="text-slate-600 leading-relaxed">Full CRUD capabilities for the Admin; a clean, "Read-Only" Command Center for the client focused on progress and payments.</p>
+                </div>
+                <div class="p-8 rounded-[40px] bg-stone-50 border border-stone-100">
+                    <div class="text-3xl mb-4">⚡</div>
+                    <h3 class="text-xl font-bold mb-3">Cloud-Sync Real-time</h3>
+                    <p class="text-slate-600 leading-relaxed">Built on a real-time cloud database. Updates to features, pricing, or status appear instantly without a page refresh.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="px-6 py-24 max-w-6xl mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
+            <p class="text-slate-600">Choose the license that fits your business model.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 items-stretch">
+            <div class="m3-card p-10 flex flex-col border border-slate-200">
+                <div class="mb-8">
+                    <h3 class="text-2xl font-bold">Basic</h3>
+                    <p class="text-slate-500 italic">For Solo Freelancers</p>
+                </div>
+                <div class="mb-8">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-5xl font-extrabold">$7</span>
+                        <span class="text-slate-500 font-medium">/month</span>
+                    </div>
+                    <p class="mt-2 text-sm font-bold text-red-600 uppercase tracking-tight italic">Or $70 per year</p>
+                </div>
+                <ul class="space-y-4 mb-10 flex-grow">
+                    <li class="flex items-center gap-3">✅ Real-time Dual Views</li>
+                    <li class="flex items-center gap-3">✅ Responsive M3 UI</li>
+                    <li class="flex items-center gap-3">✅ Milestone Tracking</li>
+                    <li class="flex items-center gap-3 text-slate-400">❌ AI Analysis Engine</li>
+                    <li class="flex items-center gap-3 text-slate-400">❌ Add-ons & PayPal.me</li>
+                </ul>
+                <button class="w-full py-4 rounded-full border-2 border-slate-900 font-bold hover:bg-slate-900 hover:text-white transition">Choose Basic</button>
+            </div>
+
+            <div class="m3-card p-10 flex flex-col brand-dark text-white relative shadow-2xl shadow-red-900/10">
+                <div class="absolute top-6 right-6 brand-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Recommended</div>
+                <div class="mb-8">
+                    <h3 class="text-2xl font-bold">Professional</h3>
+                    <p class="text-slate-400 italic">For Scaling Studios</p>
+                </div>
+                <div class="mb-8">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-5xl font-extrabold">$11</span>
+                        <span class="text-slate-400 font-medium">/month</span>
+                    </div>
+                    <p class="mt-2 text-sm font-bold text-red-400 uppercase tracking-tight italic">Or $110 per year</p>
+                </div>
+                <ul class="space-y-4 mb-10 flex-grow">
+                    <li class="flex items-center gap-3 font-semibold text-red-300 italic">⭐ Everything in Basic</li>
+                    <li class="flex items-center gap-3">✅ AI Deal Analysis Engine</li>
+                    <li class="flex items-center gap-3">✅ Financial Add-on Management</li>
+                    <li class="flex items-center gap-3">✅ PayPal.me Smart Bridge</li>
+                    <li class="flex items-center gap-3">✅ Sentiment Labeling & Logic</li>
+                </ul>
+                <button class="w-full py-4 rounded-full brand-primary font-bold hover:bg-red-700 transition shadow-lg">Choose Professional</button>
+            </div>
+        </div>
+
+        <div class="mt-12 bg-white rounded-[40px] p-8 md:p-12 border border-slate-200 text-center">
+            <h4 class="text-xl font-bold mb-2">Perpetual Licenses</h4>
+            <p class="text-slate-500 mb-8">Own the current major version of Prism Portal forever.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-8">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">One-off Basic</p>
+                    <p class="text-3xl font-black text-slate-900">$50</p>
+                </div>
+                <div class="hidden sm:block h-12 w-[1px] bg-slate-200"></div>
+                <div>
+                    <p class="text-xs font-bold text-red-400 uppercase tracking-widest mb-1">One-off Pro</p>
+                    <p class="text-3xl font-black text-red-600">$70</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-12 text-center text-slate-400 text-sm border-t border-slate-200">
+        <div class="flex justify-center mb-6">
+            <img src="Resources/Images/Logo" alt="Redstoneinvente" class="h-6 opacity-50 grayscale hover:grayscale-0 transition" onerror="this.style.display='none'">
+        </div>
+        <p>© 2025 Redstoneinvente Game Studio. <br> Prism Portal is a secure, cloud-synced dashboard solution.</p>
+    </footer>
+
+</body>
+</html>
