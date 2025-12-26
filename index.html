@@ -1308,71 +1308,129 @@ function renderAIAnalysis() {
 /**
  * 2. THE RESULT: Shows the high-value card and the Pay button
  */
-function finalizeAnalysis(container) {
+
+ function finalizeAnalysis(container) {
     if (!currentProj) return;
 
-    const p = currentProj;
-    const total = p.totalDisplayPrice || p.price || 0;
-    const targetConfidence = parseFloat((93 + Math.random() * 6).toFixed(1));
+    // 1. GET STUDIO CONTEXT (From your saved Firebase settings)
+    const exp = document.getElementById('admin_exp')?.value || 'mid';
+    const size = document.getElementById('admin_size')?.value || 'solo';
+    
+    // 2. CALCULATE BASELINE (What you SHOULD be charging)
+    let baseline = 250; // Base price per feature
+    if (exp === 'senior') baseline += 200;
+    if (exp === 'junior') baseline -= 100;
+    if (size === 'agency') baseline += 150;
 
-    // Colors and Content matching your requested visual
-    let result = {
-        label: "HIGH VALUE",
-        desc: "The scope exceeds the cost. This is a highly competitive rate for Unity development.",
-        color: "#386a3e", 
-        bgColor: "#e8f2e9", 
-        icon: "auto_awesome"
-    };
+    // 3. PROJECT STATS
+    const total = currentProj.totalDisplayPrice || currentProj.price || 0;
+    const featureCount = (currentProj.features ? currentProj.features.length : 0) || 1;
+    const actualRatio = total / featureCount;
 
+    // 4. THE 4-STAGE REACTION HEURISTICS
+    let result;
+
+    if (actualRatio < baseline * 0.75) {
+        // Way below baseline
+        result = {
+            label: "HIGH VALUE",
+            desc: "The scope exceeds the cost. This is a highly competitive rate for your profile.",
+            color: "#386a3e",
+            bgColor: "#e8f2e9",
+            icon: "auto_awesome",
+            conf: 94 + (Math.random() * 4)
+        };
+    } else if (actualRatio <= baseline * 1.25) {
+        // Within 25% of baseline
+        result = {
+            label: "MARKET AVERAGE",
+            desc: "This quote aligns perfectly with industry standards for your expertise level.",
+            color: "#1565c0",
+            bgColor: "#e3f2fd",
+            icon: "insights",
+            conf: 88 + (Math.random() * 5)
+        };
+    } else if (actualRatio <= baseline * 1.8) {
+        // Up to 80% over baseline
+        result = {
+            label: "PREMIUM QUOTE",
+            desc: "Reflects high-end technical complexity and specialized Unity development.",
+            color: "#6200ee",
+            bgColor: "#f3e5f5",
+            icon: "verified",
+            conf: 91 + (Math.random() * 3)
+        };
+    } else {
+        // Over 80% higher than baseline
+        result = {
+            label: "ELITE / CUSTOM",
+            desc: "Pricing indicates a high-priority, white-glove service or extreme complexity.",
+            color: "#b71c1c",
+            bgColor: "#fff1f1",
+            icon: "priority_high",
+            conf: 85 + (Math.random() * 5)
+        };
+    }
+
+    renderAnalysisUI(container, result);
+}
+
+function renderAnalysisUI(container, result) {
     container.innerHTML = `
-        <div class="fade-in" style="background:${result.bgColor}; border:1px solid ${result.color}25; padding:24px; border-radius:13px; display: flex; flex-direction: column; gap: 6px;">
+        <div class="fade-in" style="background:${result.bgColor}; border:1px solid ${result.color}25; padding:20px; border-radius:28px; display: flex; flex-direction: column; gap: 4px;">
             
-            <div style="display:flex; align-items:center; gap:10px; color:${result.color};">
-                <span class="material-symbols-outlined" style="font-size: 20px;">${result.icon}</span>
-                <strong style="font-size: 0.75rem; letter-spacing: 0.1rem; text-transform: uppercase;">AI Deal Analysis</strong>
+            <div style="display:flex; align-items:center; gap:8px; color:${result.color};">
+                <span class="material-symbols-outlined" style="font-size: 18px;">${result.icon}</span>
+                <strong style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">AI Deal Analysis</strong>
             </div>
             
-            <div style="font-weight: 800; font-size: 1.4rem; color: ${result.color}; line-height: 1.2;">${result.label}</div>
+            <div style="font-weight: 800; font-size: 1.3rem; color: ${result.color}; line-height: 1.2; margin-top: 4px;">${result.label}</div>
             
-            <div style="font-size: 0.9rem; color: #444; line-height: 1.4; margin-bottom: 8px;">${result.desc}</div>
+            <div style="font-size: 0.85rem; color: #444; line-height: 1.4; margin-bottom: 12px; font-weight: 500;">${result.desc}</div>
 
-            <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid ${result.color}15;">
+            <div style="padding-top: 12px; border-top: 1px solid ${result.color}15;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 0.65rem; font-weight: 700; color: ${result.color}; opacity: 0.7; text-transform: uppercase;">Engine Confidence</span>
-                    <span id="ai_conf_num" style="font-size: 0.75rem; font-weight: 800; color: ${result.color};">0.0%</span>
+                    <span style="font-size: 0.65rem; font-weight: 800; color: ${result.color}; opacity: 0.6; text-transform: uppercase;">Engine Confidence</span>
+                    <span id="ai_conf_num" style="font-size: 0.75rem; font-weight: 900; color: ${result.color}; font-variant-numeric: tabular-nums;">0.0%</span>
                 </div>
-                <div style="height: 6px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 10px; overflow: hidden;">
+                <div style="height: 6px; width: 100%; background: rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden;">
                     <div id="ai_confidence_fill" style="height: 100%; width: 0%; background: ${result.color}; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);"></div>
                 </div>
             </div>
 
             <div style="margin-top: 16px;">
-                <button onclick="initiatePayment()" class="m3-pay-btn">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">payments</span>
-                    Pay $${total} via PayPal
+                <button onclick="initiatePayment()" class="m3-pay-btn" style="background: ${result.color};">
+                    <span class="material-symbols-outlined">payments</span>
+                    Pay $${currentProj.totalDisplayPrice} via PayPal
                 </button>
             </div>
         </div>
     `;
 
-    // Sync Bar + Number Animation
+    // Trigger the Bar and Number Sync
     setTimeout(() => {
         const fillBar = document.getElementById('ai_confidence_fill');
         const numLabel = document.getElementById('ai_conf_num');
-        if (!fillBar || !numLabel) return;
-        
-        fillBar.style.width = targetConfidence + "%";
-        const startTime = performance.now();
-
-        function updateNumber(currentTime) {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / 1500, 1);
-            const eased = 1 - Math.pow(2, -10 * progress); // Ease Out Expo
-            numLabel.innerText = (targetConfidence * eased).toFixed(1) + "%";
-            if (progress < 1) requestAnimationFrame(updateNumber);
+        if (fillBar && numLabel) {
+            fillBar.style.width = result.conf + "%";
+            animateNumber(numLabel, result.conf);
         }
-        requestAnimationFrame(updateNumber);
-    }, 150);
+    }, 100);
+}
+
+function animateNumber(el, target) {
+    let start = 0;
+    const duration = 1500;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(2, -10 * progress);
+        el.innerText = (target * eased).toFixed(1) + "%";
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
 }
 
 /**
