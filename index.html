@@ -399,6 +399,8 @@
                     <div style="display:flex; align-items:center; gap:4px; font-size:1.5rem; font-weight:700;">
                         $ <input type="number" id="t_price" style="font-size:1.5rem; font-weight:700; width:100%" disabled onchange="markDirty('Updated price')">
                     </div>
+
+                    <div id="ai_analysis_box" style="margin-top: 15px;"></div>
                 </div>
 
                 <div id="historySection" class="card">
@@ -767,6 +769,15 @@ document.getElementById('printDate').innerText = new Date().toLocaleDateString()
     document.getElementById('clientRequestForm').classList.toggle('hidden', isAdmin);
     renderRequests();
 
+// 1. Make sure the container exists in the HTML
+    const aiBox = document.getElementById('ai_analysis_box');
+    
+    // 2. Call the AI Analysis
+    if (aiBox) {
+        renderAIAnalysis(); 
+    }
+
+
         renderFeatures();
         renderHistory();
         renderComments();
@@ -965,7 +976,7 @@ function renderSingleRequest(r) {
         .reduce((sum, s) => sum + s.price, 0);
 
     currentProj.totalDisplayPrice = basePrice + currentAddons;
-
+renderAIAnalysis();
     db.ref("projects/" + currentProj.id).update(currentProj);
 }
 
@@ -1144,6 +1155,55 @@ function renderSingleRequest(r) {
             resolve(null);
         };
     });
+}
+
+function renderAIAnalysis() {
+    const container = document.getElementById('ai_analysis_box');
+    if (!container) return;
+
+    // 1. "Scanning" Effect (optional but cool)
+    container.innerHTML = `<div class="loading-shimmer">AI is analyzing scope...</div>`;
+
+    setTimeout(() => {
+        const p = currentProj;
+        const featureCount = (p.features || []).length || 1;
+        const total = p.totalDisplayPrice || p.price;
+        const ratio = total / featureCount;
+
+        let result = {
+            label: "HIGH VALUE",
+            desc: "The scope exceeds the cost. This is a highly competitive rate for Unity development.",
+            color: "#2e7d32",
+            icon: "auto_awesome"
+        };
+
+        if (ratio > 500) {
+            result = {
+                label: "PREMIUM QUOTE",
+                desc: "Reflects high-end technical complexity and priority delivery.",
+                color: "#6200ee",
+                icon: "verified"
+            };
+        } else if (ratio > 250) {
+            result = {
+                label: "MARKET AVERAGE",
+                desc: "This quote aligns perfectly with standard industry rates for specialized work.",
+                color: "#1565c0",
+                icon: "insights"
+            };
+        }
+
+        container.innerHTML = `
+            <div style="background:${result.color}10; border:1px solid ${result.color}30; padding:15px; border-radius:16px;">
+                <div style="display:flex; align-items:center; gap:8px; color:${result.color}; margin-bottom:5px;">
+                    <span class="material-symbols-outlined">${result.icon}</span>
+                    <strong style="font-size:0.75rem; letter-spacing:1px;">AI DEAL ANALYSIS</strong>
+                </div>
+                <div style="font-weight:800; font-size:1.1rem; color:${result.color};">${result.label}</div>
+                <div style="font-size:0.85rem; opacity:0.8; line-height:1.4;">${result.desc}</div>
+            </div>
+        `;
+    }, 800); // Small delay to feel like it's "thinking"
 }
 </script>
 
