@@ -45,6 +45,29 @@
     animation: fadeIn 0.8s ease-out;
 }
 
+/* Mobile Optimization for AI Card */
+@media (max-width: 600px) {
+    .ai-analysis-card {
+        padding: 16px !important; /* Slightly tighter padding */
+        border-radius: 24px !important; /* Slightly less rounded for small screens */
+    }
+    
+    .ai-verdict-title {
+        font-size: 1.15rem !important; /* Scale down the title */
+    }
+
+    .m3-pay-btn {
+        padding: 12px 16px !important;
+        font-size: 0.8rem !important;
+    }
+}
+
+/* Ensure the container itself doesn't overflow */
+#ai_analysis_box {
+    width: 100%;
+    box-sizing: border-box;
+}
+
 /* M3 Spinner for the Loading State */
 .m3-spinner {
     width: 20px;
@@ -1377,37 +1400,53 @@ function renderAIAnalysis() {
 
 function renderAnalysisUI(container, result) {
     container.innerHTML = `
-        <div class="fade-in" style="background:${result.bgColor}; border:1px solid ${result.color}25; padding:20px; border-radius:28px; display: flex; flex-direction: column; gap: 4px;">
+        <div class="fade-in ai-analysis-card" style="
+            background:${result.bgColor}; 
+            border:1px solid ${result.color}25; 
+            padding:20px; 
+            border-radius:28px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px;
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+            margin: 0 auto;
+        ">
             
             <div style="display:flex; align-items:center; gap:8px; color:${result.color};">
                 <span class="material-symbols-outlined" style="font-size: 18px;">${result.icon}</span>
-                <strong style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">AI Deal Analysis</strong>
+                <strong style="font-size: 0.65rem; letter-spacing: 0.8px; text-transform: uppercase; font-weight: 800;">AI Deal Analysis</strong>
             </div>
             
-            <div style="font-weight: 800; font-size: 1.3rem; color: ${result.color}; line-height: 1.2; margin-top: 4px;">${result.label}</div>
+            <div class="ai-verdict-title" style="font-weight: 900; font-size: 1.35rem; color: ${result.color}; line-height: 1.2; margin-top: 2px;">
+                ${result.label}
+            </div>
             
-            <div style="font-size: 0.85rem; color: #444; line-height: 1.4; margin-bottom: 12px; font-weight: 500;">${result.desc}</div>
+            <div style="font-size: 0.85rem; color: #444; line-height: 1.5; margin-bottom: 12px; font-weight: 500;">
+                ${result.desc}
+            </div>
 
             <div style="padding-top: 12px; border-top: 1px solid ${result.color}15;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 0.65rem; font-weight: 800; color: ${result.color}; opacity: 0.6; text-transform: uppercase;">Engine Confidence</span>
+                    <span style="font-size: 0.6rem; font-weight: 800; color: ${result.color}; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">Engine Confidence</span>
                     <span id="ai_conf_num" style="font-size: 0.75rem; font-weight: 900; color: ${result.color}; font-variant-numeric: tabular-nums;">0.0%</span>
                 </div>
                 <div style="height: 6px; width: 100%; background: rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden;">
-                    <div id="ai_confidence_fill" style="height: 100%; width: 0%; background: ${result.color}; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);"></div>
+                    <div id="ai_confidence_fill" style="height: 100%; width: 0%; background: ${result.color}; border-radius: 10px; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);"></div>
                 </div>
             </div>
 
-            <div style="margin-top: 16px;">
-                <button onclick="initiatePayment()" class="m3-pay-btn" style="background: ${result.color};">
-                    <span class="material-symbols-outlined">payments</span>
+            <div style="margin-top: 16px; width: 100%;">
+                <button onclick="initiatePayment()" class="m3-pay-btn" style="background: ${result.color}; width: 100%; border-radius: 100px;">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">payments</span>
                     Pay $${currentProj.totalDisplayPrice} via PayPal
                 </button>
             </div>
         </div>
     `;
 
-    // Trigger the Bar and Number Sync
+    // Re-trigger animations (as defined in previous step)
     setTimeout(() => {
         const fillBar = document.getElementById('ai_confidence_fill');
         const numLabel = document.getElementById('ai_conf_num');
