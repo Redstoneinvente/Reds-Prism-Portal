@@ -34,6 +34,18 @@
     font-weight: 700;
 }
 
+#ai_health_box {
+    margin-top: 16px;    /* Space above the card */
+    margin-bottom: 24px; /* Larger space below to separate from the next section */
+    width: 100%;         /* Ensure it spans the full width of the container */
+    display: block;      /* Ensures margins are respected */
+}
+
+/* Optional: Add spacing between the Health Card and Analysis Card if they are siblings */
+#ai_health_box + #ai_analysis_box {
+    margin-top: 8px;
+}
+
 .status-planning { background: #E1F5FE; color: #01579B; }
 .status-prototyping { background: #F3E5F5; color: #4A148C; }
 .status-active { background: #E8F5E9; color: #1B5E20; }
@@ -521,6 +533,8 @@
                     <div class="progress-track"><div id="t_progress" class="progress-fill"></div></div>
                     <label>Deadline</label>
                     <input type="date" id="t_end" disabled onchange="markDirty('Updated deadline')">
+
+                    <div id="ai_health_box"></div>
                 </div>
 
                 <div class="card">
@@ -909,7 +923,7 @@ document.getElementById('printDate').innerText = new Date().toLocaleDateString()
         renderAIAnalysis(); 
     }
 
-
+renderHealthCard();
         renderFeatures();
         renderHistory();
         renderComments();
@@ -1109,6 +1123,7 @@ function renderSingleRequest(r) {
 
     currentProj.totalDisplayPrice = basePrice + currentAddons;
 renderAIAnalysis();
+renderHealthCard();
     db.ref("projects/" + currentProj.id).update(currentProj);
 }
 
@@ -1486,6 +1501,212 @@ function initiatePayment() {
     const url = `https://www.paypal.com/paypalme/${paypalUsername}/${total}`;
     
     window.open(url, '_blank');
+}
+
+function calculateProjectHealth() {
+    if (!currentProj) return null;
+
+    const today = new Date();
+    const end = new Date(currentProj.end);
+    const start = new Date(currentProj.originalEnd || currentProj.end); // Use original start if stored
+    
+    // 1. Time Pressure (0 to 100)
+    const totalDuration = Math.abs(end - start) || 1;
+    const timeElapsed = Math.abs(today - start);
+    const timeRatio = Math.min(timeElapsed / totalDuration, 1);
+
+    // 2. Scope Density
+    const featureCount = (currentProj.features || []).length;
+    const density = featureCount / (totalDuration / (1000 * 60 * 60 * 24));
+
+    // 3. Final Calculation
+    let health = 100;
+    if (timeRatio > 0.8) health -= 20; // Last 20% of time is high pressure
+    if (density > 0.5) health -= 15;   // More than 1 feature every 2 days is heavy
+
+    // Determine Status
+    if (health > 80) return { score: health, label: "Healthy", color: "#386a3e", icon: "check_circle" };
+    if (health > 50) return { score: health, label: "At Risk", color: "#f9a825", icon: "warning" };
+    return { score: health, label: "Critical", color: "#b71c1c", icon: "emergency" };
+}
+
+function renderHealthCard() {
+    const container = document.getElementById('ai_health_box');
+    if (!container || !currentProj) return;
+
+    // 1. DATA EXTRACTION
+    const today = new Date();
+    const end = new Date(currentProj.end);
+    const start = new Date(currentProj.originalEnd || currentProj.end);
+    
+    const totalDurationMs = Math.abs(end - start) || 1;
+    const timeRemainingMs = end - today;
+    const daysRemaining = Math.ceil(timeRemainingMs / (1000 * 60 * 60 * 24));
+    
+    const tasks = currentProj.features || [];
+    const totalTasks = tasks.length;
+    // Flexible check for different naming conventions
+    const completedTasks = tasks.filter(t => t.checked || t.completed || t.done).length;
+    const remainingTasks = totalTasks - completedTasks;
+    const completionRatio = totalTasks > 0 ? completedTasks / totalTasks : 0;
+    const timeExhaustionRatio = Math.min(Math.abs(today - start) / totalDurationMs, 1);
+
+    // 2. REBALANCED VELOCITY LOGIC
+    // Calculate how many days you have available for each task left
+    const daysPerTask = remainingTasks > 0 ? daysRemaining / remainingTasks : daysRemaining;
+    
+    let score = 100;
+
+    // Penalty A: Velocity Check (Fairer for long deadlines)
+    // Only penalize if you have less than 1.5 days per task remaining
+    if (remainingTasks > 0 && daysPerTask < 1.5) {
+        const urgencyPenalty = (1.5 - daysPerTask) * 20; 
+        score -= urgencyPenalty;
+    }
+
+    // Penalty B: The Lag Check (Only kicks in after 60% of time is used)
+    if (timeExhaustionRatio > 0.6) {
+        const lag = timeExhaustionRatio - completionRatio;
+        if (lag > 0.1) {
+            score -= (lag * 30);
+        }
+    }
+
+    // Penalty C: Final Countdown (Last 3 days)
+    if (daysRemaining <= 3 && daysRemaining > 0 && completionRatio < 0.9) {
+        score -= 15;
+    }
+
+    // Overdue Logic
+    if (daysRemaining < 0 && completionRatio < 1) {
+        score = 10;
+    }
+
+    score = Math.max(5, Math.min(100, Math.round(score)));
+
+    // 3. THEME SELECTION
+    let health = { 
+        label: "Stable Pace", 
+        color: "#386a3e", 
+        icon: "verified", 
+        bg: "rgba(56, 106, 62, 0.06)",
+        tip: "Project is well-buffered. Timeline vs. task density is optimal."
+    };
+
+    if (score < 80) {
+        health = { 
+            label: "High Pressure", 
+            color: "#f9a825", 
+            icon: "bolt", 
+            bg: "rgba(249, 168, 37, 0.06)",
+            tip: "Velocity is tightening. Completion rate needs to increase to meet deadline."
+        };
+    }
+
+    if (score < 45) {
+        health = { 
+            label: "Critical Delay", 
+            color: "#b71c1c", 
+            icon: "speed", 
+            bg: "rgba(183, 28, 28, 0.06)",
+            tip: "Workload exceeds remaining time. Scope reduction or extension required."
+        };
+    }
+
+    // 4. UI RENDER
+    container.innerHTML = `
+        <div class="fade-in" style="background: ${health.bg}; padding: 22px; border-radius: 28px; border: 1px solid ${health.color}20; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 6px; color: ${health.color};">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">${health.icon}</span>
+                        <strong style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;">AI Project Health</strong>
+                    </div>
+                    <div style="font-size: 1.4rem; font-weight: 900; margin-top: 4px; color: #1a1c1e;">${health.label}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div id="health_score_num" style="font-size: 1.6rem; font-weight: 900; color: ${health.color}; font-variant-numeric: tabular-nums;">0%</div>
+                    <div style="font-size: 0.6rem; opacity: 0.5; font-weight: 800; text-transform: uppercase;">Stability Index</div>
+                </div>
+            </div>
+
+            <div style="height: 10px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 10px; margin-top: 14px; overflow: hidden;">
+                <div id="health_bar_fill" style="height: 100%; width: 0%; background: ${health.color}; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1); border-radius: 10px;"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 16px; align-items: flex-end;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.85rem; font-weight: 800; color: #1a1c1e;">
+                        ${daysRemaining > 0 ? daysRemaining + ' Days Remaining' : 'Deadline Passed'}
+                    </span>
+                    <span style="font-size: 0.7rem; opacity: 0.7; color: #444;">
+                        ${remainingTasks} of ${totalTasks} features to build
+                    </span>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: ${health.color}; background: #fff; padding: 4px 10px; border-radius: 12px; border: 1px solid ${health.color}30;">
+                        ${Math.round(completionRatio * 100)}% Complete
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-size: 0.75rem; margin-top: 12px; opacity: 0.8; line-height: 1.4; color: #444; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 12px;">
+                <strong>AI Insight:</strong> ${health.tip}
+            </p>
+        </div>
+    `;
+
+    // 5. ANIMATION TRIGGERS
+    setTimeout(() => {
+        const fillBar = document.getElementById('health_bar_fill');
+        const scoreLabel = document.getElementById('health_score_num');
+        
+        if (fillBar) fillBar.style.width = score + "%";
+        if (scoreLabel) {
+            let start = 0;
+            const duration = 1500;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(2, -10 * progress);
+                const currentVal = Math.floor(score * eased);
+                
+                scoreLabel.innerText = currentVal + "%";
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+    }, 450);
+}
+
+function animateHealthNumber(el, target) {
+    let start = 0;
+    const duration = 1500; // 1.5 seconds to match the CSS transition
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function for smooth finish
+        const eased = 1 - Math.pow(2, -10 * progress);
+        
+        const currentVal = Math.floor(target * eased);
+        el.innerText = currentVal + "%";
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    requestAnimationFrame(update);
+}
+
+function getHealthTip(status) {
+    if (status === "Healthy") return "Project is on track. Deliverables are balanced with the current timeline.";
+    if (status === "At Risk") return "Timeline is tightening. Consider simplifying scope or enabling speed-up add-ons.";
+    return "High risk of delay. Immediate scope adjustment or deadline extension recommended.";
 }
 
 </script>
