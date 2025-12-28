@@ -912,7 +912,7 @@ document.getElementById('printDate').innerText = new Date().toLocaleDateString()
     }
 
         // Show form to client if no pending request, otherwise show status
-    document.getElementById('clientRequestForm').classList.toggle('hidden', isAdmin);
+    document.getElementById('clientRequestForm').classList.toggle('hidden', isAdmin && false);
     renderRequests();
 
 // 1. Make sure the container exists in the HTML
